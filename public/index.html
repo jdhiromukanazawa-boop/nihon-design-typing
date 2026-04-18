@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>日本デザイン タイピング大会</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ロビー -->
+<div id="screen-lobby" class="screen active">
+  <header class="lobby-header">
+    <div class="logo-badge">株式会社日本デザイン</div>
+    <h1>🎹 タイピング大会</h1>
+    <p class="subtitle">日本デザイン タイピング</p>
+  </header>
+
+  <div class="lobby-body">
+    <section class="lobby-players">
+      <h2 class="section-label">▶ 参加者を選ぶ</h2>
+      <div class="player-grid" id="playerGrid"></div>
+    </section>
+
+    <section class="lobby-status-panel">
+      <h2 class="section-label">▶ 参加中</h2>
+      <div class="joined-area" id="joinedArea">
+        <p class="empty-hint">カードをクリックして参加してください</p>
+      </div>
+      <p class="ready-hint">全員が「準備OK」を押すとゲームスタート！</p>
+    </section>
+  </div>
+</div>
+
+<!-- カウントダウン -->
+<div id="screen-countdown" class="screen">
+  <div class="cd-wrap">
+    <p class="cd-label">準備して！</p>
+    <div class="cd-num" id="cdNum">3</div>
+  </div>
+</div>
+
+<!-- ゲーム -->
+<div id="screen-game" class="screen">
+  <div class="game-root">
+
+    <!-- 上部ヘッダー -->
+    <div class="game-topbar">
+      <div class="round-info">ROUND <span id="roundNum">1</span><span class="round-sep">/</span><span id="maxRound">5</span></div>
+      <div class="category-pill" id="catPill">会社理念</div>
+      <div class="timer-box" id="timerBox">60</div>
+    </div>
+
+    <!-- メインエリア -->
+    <div class="game-main">
+
+      <!-- 左：スコアボード -->
+      <aside class="side-panel left-panel">
+        <div class="panel-title">スコア</div>
+        <div id="scoreList" class="score-list"></div>
+      </aside>
+
+      <!-- 中央：タイピング -->
+      <main class="typing-area">
+        <div class="display-card">
+          <div class="display-text" id="displayText"></div>
+        </div>
+
+        <div class="input-card">
+          <div class="char-preview" id="charPreview"></div>
+          <input
+            id="typingInput"
+            type="text"
+            class="typing-input"
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            placeholder="ここに入力..."
+            disabled
+          />
+          <div class="input-meta">
+            <span id="accuracyLabel">正確率 —</span>
+            <span id="wpmLabel">— WPM</span>
+          </div>
+        </div>
+
+        <!-- 全員の進捗バー -->
+        <div class="progress-all" id="progressAll"></div>
+      </main>
+
+      <!-- 右：アバターパネル -->
+      <aside class="side-panel right-panel">
+        <div class="panel-title">進捗</div>
+        <div id="avatarProgress" class="avatar-progress-list"></div>
+      </aside>
+
+    </div>
+  </div>
+</div>
+
+<!-- ラウンド結果 -->
+<div id="screen-roundend" class="screen">
+  <div class="result-wrap">
+    <div class="result-header">
+      ROUND <span id="resultRound">1</span> 結果
+    </div>
+    <div id="resultPodium" class="result-podium"></div>
+    <div id="resultList" class="result-list-mini"></div>
+    <p class="next-round-hint" id="nextHint">次のラウンドに備えて準備OKを押してください</p>
+  </div>
+</div>
+
+<!-- 最終結果 -->
+<div id="screen-gameover" class="screen">
+  <div class="gameover-wrap">
+    <div id="confettiCanvas" class="confetti-layer"></div>
+    <h2 class="gameover-title">🎉 大会終了！</h2>
+    <div id="finalPodium" class="final-podium"></div>
+    <div id="finalRanking" class="final-ranking"></div>
+    <p class="chatwork-msg" id="chatworkMsg"></p>
+    <p class="reset-msg">30秒後に自動でロビーへ戻ります</p>
+  </div>
+</div>
+
+<!-- モーダル -->
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <p id="modalText"></p>
+    <button class="btn btn-primary" onclick="closeModal()">OK</button>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
