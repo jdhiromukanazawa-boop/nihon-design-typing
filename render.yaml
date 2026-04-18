@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: nihon-design-typing
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CHATWORK_API_TOKEN
+        sync: false
+      - key: CHATWORK_ROOM_ID
+        sync: false
