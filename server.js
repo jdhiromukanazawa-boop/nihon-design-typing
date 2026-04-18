@@ -3,7 +3,9 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const fetch = require('node-fetch');
+const cron = require('node-cron');
 const { PLAYERS, TEXTS } = require('./texts');
+const report = require('./report');
 
 const app = express();
 const server = http.createServer(app);
@@ -249,7 +251,7 @@ function endGame() {
   const final = getScoreBoard();
   io.emit('gameEnd', { scoreboard: final });
   postToChatwork(final);
-  // 30秒後にリセット
+  if (reportEnabled()) report.resultReport(final);
   setTimeout(resetGame, 30000);
 }
 
@@ -315,9 +317,35 @@ async function postToChatwork(scoreboard) {
   }
 }
 
+// ─── 定時Chatworkレポート（4/21以降） ────────────────
+// 通知開始日: 2026-04-21
+const REPORT_START = new Date('2026-04-21T00:00:00+09:00');
+
+function reportEnabled() {
+  return new Date() >= REPORT_START;
+}
+
+// 毎朝9:00（JST） 朝の一言レポート
+cron.schedule('0 9 * * *', () => {
+  if (!reportEnabled()) return;
+  console.log('[Cron] 朝のレポート送信');
+  report.morningReport();
+}, { timezone: 'Asia/Tokyo' });
+
+// 毎夕18:00（JST） 夜のサマリーレポート
+cron.schedule('0 18 * * *', () => {
+  if (!reportEnabled()) return;
+  console.log('[Cron] 夕方のレポート送信');
+  const todayScores = Object.values(state.players).length > 0
+    ? getScoreBoard()
+    : [];
+  report.eveningReport(todayScores);
+}, { timezone: 'Asia/Tokyo' });
+
 // ─── サーバー起動 ─────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`\n🎹 日本デザイン タイピングゲーム`);
-  console.log(`   http://localhost:${PORT} で起動中\n`);
+  console.log(`   http://localhost:${PORT} で起動中`);
+  console.log(`   Chatworkレポート開始日: 2026-04-21（毎朝9:00・毎夕18:00）\n`);
 });
