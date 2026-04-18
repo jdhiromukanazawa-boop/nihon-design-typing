@@ -301,10 +301,20 @@ html, body { height: 100%; font-family: 'Noto Sans JP', sans-serif; background: 
   padding: 22px 26px;
 }
 .display-text {
-  font-size: clamp(1rem, 2vw, 1.4rem);
-  line-height: 2;
+  font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+  line-height: 1.7;
+  letter-spacing: .06em;
+  font-weight: 700;
+  min-height: 1.8em;
+}
+.display-romaji {
+  margin-top: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: clamp(.78rem, 1.4vw, 1rem);
+  color: var(--muted);
   letter-spacing: .04em;
-  min-height: 2em;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
 }
 
 .input-card {

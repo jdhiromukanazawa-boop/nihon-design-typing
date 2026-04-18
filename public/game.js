@@ -185,10 +185,11 @@ function startRound(round, maxRounds, text) {
   startTime   = Date.now();
   timeLeft    = 60;
 
-  document.getElementById('roundNum').textContent  = round;
-  document.getElementById('maxRound').textContent  = maxRounds;
-  document.getElementById('catPill').textContent   = text.category;
+  document.getElementById('roundNum').textContent    = round;
+  document.getElementById('maxRound').textContent    = maxRounds;
+  document.getElementById('catPill').textContent     = text.category;
   document.getElementById('displayText').textContent = text.display;
+  document.getElementById('displayRomaji').textContent = text.romaji || text.input;
   document.getElementById('accuracyLabel').textContent = '正確率 —';
   document.getElementById('wpmLabel').textContent      = '— WPM';
 
@@ -196,6 +197,9 @@ function startRound(round, maxRounds, text) {
   input.value = '';
   input.disabled = false;
   input.focus();
+
+  // スペースキーを封鎖
+  input.onkeydown = e => { if (e.key === ' ') e.preventDefault(); };
 
   renderCharPreview('');
   buildProgressBars();

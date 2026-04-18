@@ -14,7 +14,7 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 // ─── ゲーム状態 ───────────────────────────────────────
-const MAX_ROUNDS = 5;
+const MAX_ROUNDS = 10;
 
 let state = createInitialState();
 
@@ -32,7 +32,22 @@ function createInitialState() {
 }
 
 function shuffleTexts() {
-  return [...TEXTS].sort(() => Math.random() - 0.5);
+  // 長文は20%の確率でのみ出題
+  const short = TEXTS.filter(t => !t.long);
+  const long  = TEXTS.filter(t => t.long);
+  const pool  = [];
+  for (let i = 0; i < MAX_ROUNDS * 3; i++) {
+    pool.push(Math.random() < 0.2 && long.length
+      ? long[Math.floor(Math.random() * long.length)]
+      : short[Math.floor(Math.random() * short.length)]);
+  }
+  // 重複なしになるよう短文優先でユニーク化
+  const seen = new Set();
+  const unique = [];
+  for (const t of pool) {
+    if (!seen.has(t.input)) { seen.add(t.input); unique.push(t); }
+  }
+  return unique.sort(() => Math.random() - 0.5);
 }
 
 // ─── Socket.io ────────────────────────────────────────
