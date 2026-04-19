@@ -154,11 +154,17 @@ const PORT = process.env.PORT || 3000;
     await initIfEmpty();
     questionsCache = await getQuestions();
     console.log(`[DB] ${questionsCache.length}件の問題を読み込みました`);
-    scoresCache = await getTopScores();
-    console.log(`[DB] ${scoresCache.length}件のスコアを読み込みました`);
   } catch (e) {
     console.error('[DB] 接続エラー:', e.message);
     process.exit(1);
+  }
+
+  try {
+    scoresCache = await getTopScores();
+    console.log(`[DB] ${scoresCache.length}件のスコアを読み込みました`);
+  } catch (e) {
+    console.warn('[DB] スコア読み込みエラー（続行）:', e.message);
+    scoresCache = [];
   }
 
   server.listen(PORT, () => {

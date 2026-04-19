@@ -797,6 +797,19 @@ html, body {
 .result-ranking-section { text-align: left; margin-bottom: 24px; }
 .btn-replay { font-size: 1.05rem; padding: 14px 36px; }
 
+/* 思い出の社員 */
+.memory-section { margin: 0 0 28px; text-align: center; }
+.memory-players { display: flex; justify-content: center; gap: 20px; margin: 16px 0 18px; flex-wrap: wrap; }
+.mem-player { display: flex; flex-direction: column; align-items: center; gap: 6px; opacity: .65; transition: all .2s; }
+.mem-player.mem-me { opacity: 1; transform: scale(1.1); }
+.mem-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border); }
+.mem-me .mem-avatar { border-color: var(--accent); box-shadow: 0 0 14px var(--accent); }
+.mem-nick { font-size: .78rem; font-weight: 700; }
+.memory-msg { font-size: .9rem; color: var(--text-sub); line-height: 1.75;
+  background: rgba(255,255,255,.04); border-left: 3px solid var(--accent);
+  padding: 10px 16px; border-radius: 0 8px 8px 0; text-align: left;
+  max-width: 480px; margin: 0 auto; }
+
 /* scrollbar */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
