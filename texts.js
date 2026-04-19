@@ -193,6 +193,27 @@ const TEXTS = [
   T('人生はシャンパンタワー',
     'jinsei ha shanpan tawa-',
     '社員キーワード'),
+
+  // ── 大坪さんカルタより（追加分）────────────────────
+  T('2度目とかなかったからね みんな幸せだよねぇ',
+    'nidome toka nakatta kara ne minna shiawase da yo ne',
+    '社長の名言', true),
+
+  T('脱いだらすごいんだけどね 俺も',
+    'nuidara sugoi n da kedo ne ore mo',
+    '社長の名言', true),
+
+  T('まあ どうなりたいかだよねぇ',
+    'maa dou naritai ka da yo ne',
+    '社長の名言'),
+
+  T('目先の感謝とか ありがたいけどねぇ',
+    'mesaki no kansha toka arigatai kedo ne',
+    '社長の名言'),
+
+  T('ルール守ってる側のうちはねぇ',
+    'ru-ru mamotteru gawa no uchi ha ne',
+    '社長の名言'),
 ];
 
 module.exports = { PLAYERS, TEXTS };
