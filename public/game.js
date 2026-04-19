@@ -295,6 +295,20 @@ function finishGame() {
   showResult(score, avgWpm, avgAcc);
 }
 
+// ── スコアに応じたpic選択 ─────────────────────────────
+function picForScore(score) {
+  if (score >= 2000) return 10;
+  if (score >= 1600) return 9;
+  if (score >= 1200) return 8;
+  if (score >= 900)  return 7;
+  if (score >= 650)  return 6;
+  if (score >= 450)  return 5;
+  if (score >= 300)  return 4;
+  if (score >= 180)  return 3;
+  if (score >= 80)   return 2;
+  return 1;
+}
+
 // ── 結果画面 ──────────────────────────────────────────
 function showResult(score, avgWpm, avgAcc) {
   document.getElementById('resultAvatar').src         = myPlayer.avatar;
@@ -302,6 +316,11 @@ function showResult(score, avgWpm, avgAcc) {
   document.getElementById('resultScore').textContent  = score;
   document.getElementById('resultWpm').textContent    = avgWpm;
   document.getElementById('resultAccuracy').textContent = `${avgAcc}%`;
+
+  const picNum = picForScore(score);
+  const picEl  = document.getElementById('scorePic');
+  picEl.src    = `/avatars/pic${picNum}.jpg`;
+  picEl.alt    = `スコアキャラクター lv${picNum}`;
 
   renderLeaderboard('resultLeaderboard', leaderboard);
   spawnConfetti();

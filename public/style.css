@@ -497,6 +497,21 @@ html, body {
 }
 .btn-replay { font-size: 1.05rem; padding: 14px 36px; z-index: 1; }
 
+/* スコアキャラクター */
+.score-pic-wrap {
+  text-align: center; z-index: 1;
+}
+.score-pic {
+  width: 200px; height: 200px; object-fit: contain;
+  border-radius: 20px;
+  filter: drop-shadow(0 8px 24px rgba(124,58,237,.25));
+  animation: picPop .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes picPop {
+  from { transform: scale(.5) rotate(-8deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);   opacity: 1; }
+}
+
 /* 思い出の写真 */
 .memory-section { margin: 0; text-align: center; width: 100%; z-index: 1; }
 .memory-photos { display: flex; justify-content: center; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
