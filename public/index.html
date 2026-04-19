@@ -15,21 +15,28 @@
   <header class="lobby-header">
     <div class="logo-badge">株式会社日本デザイン</div>
     <h1>🎹 タイピング大会</h1>
-    <p class="subtitle">日本デザイン タイピング</p>
+    <button id="soundToggle" class="sound-btn" title="サウンドON">🔊</button>
   </header>
 
   <div class="lobby-body">
-    <section class="lobby-players">
-      <h2 class="section-label">▶ 参加者を選ぶ</h2>
+    <section class="select-section">
+      <h2 class="section-label">▶ キャラクターを選ぶ</h2>
       <div class="player-grid" id="playerGrid"></div>
+      <button class="btn btn-primary btn-start" id="startBtn" disabled>プレイ開始 ▶</button>
+      <p class="key-hint" id="startHint" style="display:none">スペースキーでもスタートできます</p>
     </section>
 
-    <section class="lobby-status-panel">
-      <h2 class="section-label">▶ 参加中</h2>
-      <div class="joined-area" id="joinedArea">
-        <p class="empty-hint">カードをクリックして参加してください</p>
+    <section class="ranking-section">
+      <h2 class="section-label">▶ 本日のランキング</h2>
+      <div class="lb-header-row">
+        <span class="lbh-rank">順位</span>
+        <span class="lbh-name">名前</span>
+        <span class="lbh-score">スコア</span>
+        <span class="lbh-wpm">WPM</span>
+        <span class="lbh-acc">正確率</span>
+        <span class="lbh-time">時間</span>
       </div>
-      <p class="ready-hint">全員が「準備OK」を押すとゲームスタート！</p>
+      <div id="lobbyLeaderboard" class="leaderboard"></div>
     </section>
   </div>
 </div>
@@ -45,24 +52,13 @@
 <!-- ゲーム -->
 <div id="screen-game" class="screen">
   <div class="game-root">
-
-    <!-- 上部ヘッダー -->
     <div class="game-topbar">
-      <div class="round-info">ROUND <span id="roundNum">1</span><span class="round-sep">/</span><span id="maxRound">5</span></div>
-      <div class="category-pill" id="catPill">会社理念</div>
+      <div class="round-info">TEXT <span id="roundNum">1</span><span class="round-sep">/</span><span id="maxRound">10</span></div>
+      <div class="category-pill" id="catPill"></div>
       <div class="timer-box" id="timerBox">60</div>
     </div>
 
-    <!-- メインエリア -->
-    <div class="game-main">
-
-      <!-- 左：スコアボード -->
-      <aside class="side-panel left-panel">
-        <div class="panel-title">スコア</div>
-        <div id="scoreList" class="score-list"></div>
-      </aside>
-
-      <!-- 中央：タイピング -->
+    <div class="game-main-solo">
       <main class="typing-area">
         <div class="display-card">
           <div class="display-text" id="displayText"></div>
@@ -85,41 +81,50 @@
           </div>
         </div>
 
-        <!-- 全員の進捗バー -->
-        <div class="progress-all" id="progressAll"></div>
+        <div class="progress-dots" id="progressDots"></div>
+        <div class="text-result-flash" id="textResultFlash"></div>
       </main>
-
-      <!-- 右：アバターパネル -->
-      <aside class="side-panel right-panel">
-        <div class="panel-title">進捗</div>
-        <div id="avatarProgress" class="avatar-progress-list"></div>
-      </aside>
-
     </div>
   </div>
 </div>
 
-<!-- ラウンド結果 -->
-<div id="screen-roundend" class="screen">
-  <div class="result-wrap">
-    <div class="result-header">
-      ROUND <span id="resultRound">1</span> 結果
-    </div>
-    <div id="resultPodium" class="result-podium"></div>
-    <div id="resultList" class="result-list-mini"></div>
-    <p class="next-round-hint" id="nextHint">次のラウンドに備えて準備OKを押してください</p>
-  </div>
-</div>
-
-<!-- 最終結果 -->
-<div id="screen-gameover" class="screen">
-  <div class="gameover-wrap">
+<!-- 結果 -->
+<div id="screen-result" class="screen">
+  <div class="result-solo-wrap">
     <div id="confettiCanvas" class="confetti-layer"></div>
-    <h2 class="gameover-title">🎉 大会終了！</h2>
-    <div id="finalPodium" class="final-podium"></div>
-    <div id="finalRanking" class="final-ranking"></div>
-    <p class="chatwork-msg" id="chatworkMsg"></p>
-    <p class="reset-msg">30秒後に自動でロビーへ戻ります</p>
+    <h2 class="result-solo-title">🎉 プレイ完了！</h2>
+
+    <div class="my-result-card">
+      <img class="my-avatar" id="resultAvatar" src="" alt="">
+      <div class="my-nickname" id="resultNickname"></div>
+      <div class="my-score-big"><span id="resultScore">0</span><small>pt</small></div>
+      <div class="my-stats">
+        <div class="my-stat-item">
+          <div class="stat-val" id="resultWpm">—</div>
+          <div class="stat-label">WPM</div>
+        </div>
+        <div class="my-stat-sep"></div>
+        <div class="my-stat-item">
+          <div class="stat-val" id="resultAccuracy">—</div>
+          <div class="stat-label">正確率</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-ranking-section">
+      <h3 class="section-label">▶ 本日のランキング</h3>
+      <div class="lb-header-row">
+        <span class="lbh-rank">順位</span>
+        <span class="lbh-name">名前</span>
+        <span class="lbh-score">スコア</span>
+        <span class="lbh-wpm">WPM</span>
+        <span class="lbh-acc">正確率</span>
+        <span class="lbh-time">時間</span>
+      </div>
+      <div id="resultLeaderboard" class="leaderboard"></div>
+    </div>
+
+    <button class="btn btn-primary btn-replay" id="replayBtn">もう一回プレイ ▶</button>
   </div>
 </div>
 

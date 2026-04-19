@@ -1,10 +1,11 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
 const { PLAYERS } = require('./texts');
-const { getQuestions, addQuestion, deleteQuestion, initIfEmpty } = require('./db');
+const { getQuestions, addQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -14,12 +15,16 @@ const io = new Server(server);
 app.use(express.static('public'));
 app.use(express.json());
 
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 const TEXTS_PER_GAME = 20;
 const REPORT_START = new Date('2026-04-21T00:00:00+09:00');
 const ADMIN_PASSWORD = 'kanazawa';
 
-// 今日の記録
-let dailyRecords = [];
+// 永続スコアキャッシュ（Supabase から取得）
+let scoresCache = [];
 // 問題キャッシュ
 let questionsCache = [];
 
@@ -93,19 +98,18 @@ app.delete('/api/admin/questions/:id', adminAuth, async (req, res) => {
 // ── Socket.IO ─────────────────────────────────────
 io.on('connection', (socket) => {
   console.log(`接続: ${socket.id}`);
-  socket.emit('leaderboardUpdate', dailyRecords);
+  socket.emit('leaderboardUpdate', scoresCache);
 
   socket.on('startGame', ({ playerId }) => {
     if (!PLAYERS.find(p => p.id === playerId)) return;
     socket.emit('gameData', { texts: pickTexts() });
   });
 
-  socket.on('submitScore', ({ playerId, score, avgWpm, avgAccuracy }) => {
+  socket.on('submitScore', async ({ playerId, score, avgWpm, avgAccuracy }) => {
     const playerDef = PLAYERS.find(p => p.id === playerId);
     if (!playerDef) return;
 
-    const record = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    const rounded = {
       playerId,
       name:        playerDef.name,
       nickname:    playerDef.nickname,
@@ -113,26 +117,20 @@ io.on('connection', (socket) => {
       score:       Math.round(score),
       avgWpm:      Math.round(avgWpm),
       avgAccuracy: Math.round(avgAccuracy),
-      timestamp: new Date().toLocaleTimeString('ja-JP', {
-        timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit',
-      }),
     };
 
-    dailyRecords.push(record);
-    dailyRecords.sort((a, b) => b.score - a.score);
-    io.emit('leaderboardUpdate', dailyRecords);
-    console.log(`[Score] ${record.nickname} ${record.score}pt (${record.avgWpm}WPM / ${record.avgAccuracy}%)`);
+    try {
+      await saveScore(rounded);
+      scoresCache = await getTopScores();
+      io.emit('leaderboardUpdate', scoresCache);
+      console.log(`[Score] ${rounded.nickname} ${rounded.score}pt (${rounded.avgWpm}WPM / ${rounded.avgAccuracy}%)`);
+    } catch (e) {
+      console.error('[Score] 保存エラー:', e.message);
+    }
   });
 
   socket.on('disconnect', () => console.log(`切断: ${socket.id}`));
 });
-
-// 日次リセット（JST 0:00）
-cron.schedule('0 0 * * *', () => {
-  console.log('[Cron] 日次リセット');
-  dailyRecords = [];
-  io.emit('leaderboardUpdate', dailyRecords);
-}, { timezone: 'Asia/Tokyo' });
 
 // 朝の一言（9:00 JST）
 cron.schedule('0 9 * * *', () => {
@@ -145,7 +143,7 @@ cron.schedule('0 9 * * *', () => {
 cron.schedule('0 18 * * *', () => {
   if (!reportEnabled()) return;
   console.log('[Cron] 夕方レポート');
-  report.eveningReport(dailyRecords);
+  report.eveningReport(scoresCache);
 }, { timezone: 'Asia/Tokyo' });
 
 // ── 起動 ──────────────────────────────────────────
@@ -156,6 +154,8 @@ const PORT = process.env.PORT || 3000;
     await initIfEmpty();
     questionsCache = await getQuestions();
     console.log(`[DB] ${questionsCache.length}件の問題を読み込みました`);
+    scoresCache = await getTopScores();
+    console.log(`[DB] ${scoresCache.length}件のスコアを読み込みました`);
   } catch (e) {
     console.error('[DB] 接続エラー:', e.message);
     process.exit(1);

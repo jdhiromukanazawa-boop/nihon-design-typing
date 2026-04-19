@@ -56,4 +56,34 @@ async function initIfEmpty() {
   console.log(`[DB] ${rows.length}件 投入完了`);
 }
 
-module.exports = { supabase, getQuestions, addQuestion, deleteQuestion, initIfEmpty };
+async function saveScore({ playerId, name, nickname, color, score, avgWpm, avgAccuracy }) {
+  const { error } = await supabase
+    .from('scores')
+    .insert([{ player_id: playerId, name, nickname, color, score, avg_wpm: avgWpm, avg_accuracy: avgAccuracy }]);
+  if (error) throw error;
+}
+
+async function getTopScores(limit = 30) {
+  const { data, error } = await supabase
+    .from('scores')
+    .select('*')
+    .order('score', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(r => ({
+    id:          r.id,
+    playerId:    r.player_id,
+    name:        r.name,
+    nickname:    r.nickname,
+    color:       r.color,
+    score:       r.score,
+    avgWpm:      r.avg_wpm,
+    avgAccuracy: r.avg_accuracy,
+    timestamp:   new Date(r.achieved_at).toLocaleString('ja-JP', {
+      timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }),
+  }));
+}
+
+module.exports = { supabase, getQuestions, addQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores };
