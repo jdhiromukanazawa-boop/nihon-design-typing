@@ -51,6 +51,7 @@ let wrongKeys     = 0;   // ミス回数
 let nPending      = false; // 「ん」の n が pending（nn か単 n か待ち）
 let showingError  = false; // エラー表示中
 let displayedInput = ''; // ユーザーが実際に打った文字列（表示用）
+let missedKeyCount = {}; // ミスしたキーの集計 { char: count }
 
 // ── キーボードレイアウト ──────────────────────────────
 const KB_LAYOUT = [
@@ -268,6 +269,7 @@ function showText(idx) {
   nPending      = false;
   showingError  = false;
   displayedInput = '';
+  missedKeyCount = {};
 
   const input = document.getElementById('typingInput');
   input.value    = '';
@@ -409,9 +411,11 @@ function _processCharAt(ch) {
     // ミス
     wrongKeys++;
     showingError = true;
-    // currentSeq はリセット（途中の不正入力をクリア）
+    const missChar = expected[matchedEPos];
+    missedKeyCount[missChar] = (missedKeyCount[missChar] || 0) + 1;
     currentSeq = '';
     playErrorSound();
+    triggerMissFlash();
     _updateDisplay();
   }
 }
@@ -494,6 +498,52 @@ function finishGame() {
   showResult(score, avgWpm, avgAcc);
 }
 
+// ── MISS!! フラッシュ ─────────────────────────────────
+function triggerMissFlash() {
+  const el = document.getElementById('missFlash');
+  if (!el) return;
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+}
+
+// ── ランク判定 ────────────────────────────────────────
+function getRank(score) {
+  if (score >= 2000) return { label: 'S ランク',  color: '#f59e0b' };
+  if (score >= 1600) return { label: 'A+ ランク', color: '#7c3aed' };
+  if (score >= 1300) return { label: 'A ランク',  color: '#7c3aed' };
+  if (score >= 1000) return { label: 'A- ランク', color: '#9f67f5' };
+  if (score >= 700)  return { label: 'B ランク',  color: '#06D6A0' };
+  if (score >= 500)  return { label: 'B- ランク', color: '#06D6A0' };
+  if (score >= 350)  return { label: 'C ランク',  color: '#00B4D8' };
+  if (score >= 200)  return { label: 'D ランク',  color: '#6b7280' };
+  if (score >= 100)  return { label: 'E ランク',  color: '#9CA3AF' };
+  if (score >= 50)   return { label: 'F ランク',  color: '#9CA3AF' };
+  return                     { label: 'Z ランク',  color: '#ef4444' };
+}
+
+// ── 課題フィードバック ────────────────────────────────
+function getFeedback(avgAcc, avgWpm) {
+  const tips = [];
+
+  // 最もミスの多いキー
+  const entries = Object.entries(missedKeyCount).sort((a, b) => b[1] - a[1]);
+  if (entries.length > 0 && entries[0][1] >= 2) {
+    tips.push(`「${entries[0][0]}」キーのミスが多め`);
+  }
+
+  if (avgAcc < 80)       tips.push('正確性が課題！ゆっくり丁寧に打とう');
+  else if (avgAcc < 90)  tips.push('正確性をもう少し上げるとスコアアップ');
+  else if (avgAcc >= 97) tips.push('正確性は抜群！');
+
+  if (avgWpm < 30)       tips.push('スピードを意識してみよう');
+  else if (avgWpm >= 80) tips.push('スピードは十分！');
+
+  if (tips.length === 0) tips.push('バランスが良い！この調子で！');
+
+  return tips;
+}
+
 // ── スコアに応じたpic選択（ランダム要素あり）──────────
 function picForScore(score) {
   // スコア帯に応じたベース値（高スコアほど高い番号が出やすい）
@@ -521,6 +571,15 @@ function showResult(score, avgWpm, avgAcc) {
   const info = PIC_INFO[picNum] || PIC_INFO[1];
   document.getElementById('picTitle').textContent = `「${info.title}」`;
   document.getElementById('picRarity').innerHTML = starsHtml(info.rarity);
+
+  const rank = getRank(score);
+  const rankEl = document.getElementById('resultRank');
+  rankEl.textContent = rank.label;
+  rankEl.style.color = rank.color;
+
+  const feedbackItems = getFeedback(avgAcc, avgWpm);
+  document.getElementById('resultFeedback').innerHTML =
+    feedbackItems.map(f => `<div class="fb-item">💡 ${f}</div>`).join('');
 
   renderLeaderboard('resultLeaderboard', leaderboard);
   spawnConfetti();

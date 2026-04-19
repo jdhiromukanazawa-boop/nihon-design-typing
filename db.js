@@ -46,26 +46,42 @@ async function deleteQuestion(id) {
   if (error) throw error;
 }
 
-// テーブルが空なら texts.js の初期データを投入
+// texts.js の内容を DB に同期（新規追加＋既存の romaji/category 修正）
 async function initIfEmpty() {
-  const { count, error } = await supabase
-    .from('questions')
-    .select('*', { count: 'exact', head: true });
+  const existing = await getQuestions();
 
-  if (error) throw error;
-  if (count > 0) return;
+  if (existing.length === 0) {
+    console.log('[DB] テーブルが空のため初期データを投入します...');
+    const rows = TEXTS.map(t => ({
+      display: t.display, romaji: t.romaji, input: t.input,
+      category: t.category, long: t.long || false,
+    }));
+    const { error: insErr } = await supabase.from('questions').insert(rows);
+    if (insErr) throw insErr;
+    console.log(`[DB] ${rows.length}件 投入完了`);
+    return;
+  }
 
-  console.log('[DB] テーブルが空のため初期データを投入します...');
-  const rows = TEXTS.map(t => ({
-    display:  t.display,
-    romaji:   t.romaji,
-    input:    t.input,
-    category: t.category,
-    long:     t.long || false,
-  }));
-  const { error: insErr } = await supabase.from('questions').insert(rows);
-  if (insErr) throw insErr;
-  console.log(`[DB] ${rows.length}件 投入完了`);
+  // 既存データと texts.js を比較して差分を更新
+  const existingMap = new Map(existing.map(q => [q.display, q]));
+  let updated = 0, added = 0;
+  for (const t of TEXTS) {
+    const db = existingMap.get(t.display);
+    if (!db) {
+      await supabase.from('questions').insert([{
+        display: t.display, romaji: t.romaji, input: t.input,
+        category: t.category, long: t.long || false,
+      }]);
+      added++;
+    } else if (db.romaji !== t.romaji || db.input !== t.input || db.category !== t.category || db.long !== (t.long || false)) {
+      await supabase.from('questions').update({
+        romaji: t.romaji, input: t.input, category: t.category, long: t.long || false,
+      }).eq('id', db.id);
+      updated++;
+    }
+  }
+  if (updated > 0 || added > 0)
+    console.log(`[DB] 同期完了: ${added}件追加, ${updated}件更新`);
 }
 
 async function saveScore({ playerId, name, nickname, color, score, avgWpm, avgAccuracy }) {

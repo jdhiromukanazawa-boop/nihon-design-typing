@@ -509,6 +509,25 @@ html, body {
   transition: none;
 }
 
+/* MISS!! フラッシュ */
+.miss-flash {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.3rem; font-weight: 900;
+  color: var(--red); letter-spacing: .12em;
+  height: 1.8em;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+}
+.miss-flash.show {
+  animation: missAnim .55s ease forwards;
+}
+@keyframes missAnim {
+  0%   { opacity: 1; transform: scale(1.3) translateY(-4px); }
+  50%  { opacity: 1; transform: scale(1)   translateY(0); }
+  100% { opacity: 0; transform: scale(.9)  translateY(4px); }
+}
+
 /* progress dots */
 .progress-dots {
   display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: auto;
@@ -638,6 +657,26 @@ html, body {
 }
 .stars-filled { color: #f59e0b; }
 .stars-empty  { color: var(--border); }
+
+/* ランクバッジ */
+.my-rank-badge {
+  font-size: 2rem; font-weight: 900;
+  margin-top: 14px; letter-spacing: .06em;
+}
+
+/* 課題フィードバック */
+.my-feedback {
+  margin-top: 10px;
+  display: flex; flex-direction: column; gap: 6px; align-items: center;
+}
+.fb-item {
+  background: var(--sur2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 18px;
+  font-size: .82rem; font-weight: 700;
+  color: var(--text-sub);
+}
 
 /* 思い出の写真 */
 .memory-section { margin: 0; text-align: center; width: 100%; z-index: 1; }
