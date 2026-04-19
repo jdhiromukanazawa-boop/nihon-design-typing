@@ -186,29 +186,33 @@
     <div class="q-count" id="qCount"></div>
     <div id="tableWrap"><div class="loading">読み込み中...</div></div>
   </div>
+
+  <!-- ランキング管理 -->
+  <div class="card">
+    <h2>🏆 今日のランキング管理</h2>
+    <p style="font-size:.8rem;color:#666;margin-bottom:12px">削除するとランキングからも即時反映されます（毎日0時に自動リセット）</p>
+    <div id="rankWrap"><div class="loading">読み込み中...</div></div>
+  </div>
 </div>
 
 <script>
 let pw = '';
 let allQuestions = [];
+let editingId = null;
 
 function login() {
   pw = document.getElementById('pwInput').value;
   fetch('/api/admin/questions', { headers: { 'x-admin-password': pw } })
-    .then(r => {
-      if (!r.ok) throw new Error();
-      return r.json();
-    })
+    .then(r => { if (!r.ok) throw new Error(); return r.json(); })
     .then(data => {
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainScreen').style.display = 'block';
       allQuestions = data;
       renderTable();
       populateCategoryList();
+      loadRankings();
     })
-    .catch(() => {
-      document.getElementById('loginError').style.display = 'block';
-    });
+    .catch(() => { document.getElementById('loginError').style.display = 'block'; });
 }
 
 document.getElementById('pwInput').addEventListener('keydown', e => {
@@ -217,8 +221,7 @@ document.getElementById('pwInput').addEventListener('keydown', e => {
 
 function populateCategoryList() {
   const cats = [...new Set(allQuestions.map(q => q.category))].sort();
-  const dl = document.getElementById('categoryList');
-  dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+  document.getElementById('categoryList').innerHTML = cats.map(c => `<option value="${c}">`).join('');
   const sel = document.getElementById('filterCat');
   const current = sel.value;
   sel.innerHTML = '<option value="">すべてのカテゴリ</option>' +
@@ -226,48 +229,78 @@ function populateCategoryList() {
 }
 
 function renderTable() {
-  const keyword = document.getElementById('filterText').value.toLowerCase();
-  const cat     = document.getElementById('filterCat').value;
+  const keyword  = document.getElementById('filterText').value.toLowerCase();
+  const cat      = document.getElementById('filterCat').value;
   const filtered = allQuestions.filter(q => {
     const matchCat  = !cat || q.category === cat;
     const matchWord = !keyword ||
       q.display.includes(keyword) || q.romaji.toLowerCase().includes(keyword) || q.category.includes(keyword);
     return matchCat && matchWord;
   });
-
   document.getElementById('qCount').textContent = `${filtered.length} / ${allQuestions.length} 件`;
-
   if (!filtered.length) {
     document.getElementById('tableWrap').innerHTML = '<div class="loading">該当なし</div>';
     return;
   }
-
   document.getElementById('tableWrap').innerHTML = `
     <table>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>表示テキスト</th>
-          <th>ローマ字</th>
-          <th>カテゴリ</th>
-          <th>種別</th>
-          <th></th>
-        </tr>
-      </thead>
+      <thead><tr><th>ID</th><th>表示テキスト</th><th>ローマ字</th><th>カテゴリ</th><th>種別</th><th></th></tr></thead>
       <tbody>
-        ${filtered.map(q => `
+        ${filtered.map(q => editingId === q.id ? `
+          <tr style="background:#1f1f38">
+            <td style="color:#555">${q.id}</td>
+            <td colspan="3">
+              <input type="text" id="eDisplay" value="${esc(q.display)}" style="width:100%;margin-bottom:6px" />
+              <input type="text" id="eRomaji"  value="${esc(q.romaji)}"  style="width:100%;margin-bottom:6px" />
+              <input type="text" id="eCategory" value="${esc(q.category)}" style="width:100%" list="categoryList" />
+            </td>
+            <td><label style="display:flex;align-items:center;gap:6px;font-size:.8rem;color:#b0b0d0">
+              <input type="checkbox" id="eLong" ${q.long ? 'checked' : ''} style="width:14px;height:14px"> 長文
+            </label></td>
+            <td style="white-space:nowrap">
+              <button class="btn btn-primary btn-sm" onclick="saveEdit(${q.id})">保存</button>
+              <button class="btn btn-sm" style="background:#2a2a4a;color:#a0a0c0;margin-left:4px" onclick="cancelEdit()">キャンセル</button>
+            </td>
+          </tr>
+        ` : `
           <tr>
             <td style="color:#555">${q.id}</td>
             <td class="col-display">${esc(q.display)}</td>
             <td class="col-romaji">${esc(q.romaji)}</td>
             <td><span class="badge">${esc(q.category)}</span></td>
             <td>${q.long ? '<span class="badge badge-long">長文</span>' : '<span class="badge">短文</span>'}</td>
-            <td><button class="btn btn-danger" onclick="deleteQuestion(${q.id})">削除</button></td>
+            <td style="white-space:nowrap">
+              <button class="btn btn-sm" style="background:#3a2a5a;color:#c084fc;margin-right:4px" onclick="startEdit(${q.id})">編集</button>
+              <button class="btn btn-danger" onclick="deleteQuestion(${q.id})">削除</button>
+            </td>
           </tr>
         `).join('')}
       </tbody>
-    </table>
-  `;
+    </table>`;
+}
+
+function startEdit(id) { editingId = id; renderTable(); }
+function cancelEdit()  { editingId = null; renderTable(); }
+
+async function saveEdit(id) {
+  const display  = document.getElementById('eDisplay').value.trim();
+  const romaji   = document.getElementById('eRomaji').value.trim();
+  const category = document.getElementById('eCategory').value.trim();
+  const long     = document.getElementById('eLong').checked;
+  if (!display || !romaji || !category) { alert('必須項目が空です'); return; }
+  try {
+    const res = await fetch(`/api/admin/questions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': pw },
+      body: JSON.stringify({ display, romaji, category, long }),
+    });
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
+    const q = await res.json();
+    allQuestions = allQuestions.map(x => x.id === id ? q : x);
+    editingId = null;
+    populateCategoryList();
+    renderTable();
+  } catch (e) { alert('保存に失敗しました: ' + e.message); }
 }
 
 async function addQuestion() {
@@ -276,61 +309,87 @@ async function addQuestion() {
   const category = document.getElementById('fCategory').value.trim();
   const long     = document.getElementById('fLong').checked;
   const msg      = document.getElementById('addMsg');
-
   if (!display || !romaji || !category) {
-    msg.className = 'msg-err';
-    msg.textContent = '表示テキスト・ローマ字・カテゴリは必須です';
-    return;
+    msg.className = 'msg-err'; msg.textContent = '表示テキスト・ローマ字・カテゴリは必須です'; return;
   }
-
   try {
     const res = await fetch('/api/admin/questions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-admin-password': pw },
       body: JSON.stringify({ display, romaji, category, long }),
     });
-    if (!res.ok) {
-      const e = await res.json();
-      throw new Error(e.error);
-    }
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error); }
     const q = await res.json();
     allQuestions.push(q);
     populateCategoryList();
     renderTable();
-    document.getElementById('fDisplay').value  = '';
-    document.getElementById('fRomaji').value   = '';
-    document.getElementById('fLong').checked   = false;
-    msg.className = 'msg-ok';
-    msg.textContent = '追加しました！';
+    document.getElementById('fDisplay').value = '';
+    document.getElementById('fRomaji').value  = '';
+    document.getElementById('fLong').checked  = false;
+    msg.className = 'msg-ok'; msg.textContent = '追加しました！';
     setTimeout(() => { msg.textContent = ''; }, 3000);
   } catch (e) {
-    msg.className = 'msg-err';
-    msg.textContent = 'エラー: ' + e.message;
+    msg.className = 'msg-err'; msg.textContent = 'エラー: ' + e.message;
   }
 }
 
 async function deleteQuestion(id) {
   if (!confirm('この問題を削除しますか？')) return;
   try {
-    const res = await fetch(`/api/admin/questions/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-admin-password': pw },
-    });
+    const res = await fetch(`/api/admin/questions/${id}`, { method: 'DELETE', headers: { 'x-admin-password': pw } });
     if (!res.ok) throw new Error();
     allQuestions = allQuestions.filter(q => q.id !== id);
-    populateCategoryList();
-    renderTable();
+    populateCategoryList(); renderTable();
+  } catch (e) { alert('削除に失敗しました'); }
+}
+
+// ── ランキング管理 ──
+async function loadRankings() {
+  try {
+    const res = await fetch('/api/admin/scores', { headers: { 'x-admin-password': pw } });
+    const data = await res.json();
+    renderRankings(data);
   } catch (e) {
-    alert('削除に失敗しました');
+    document.getElementById('rankWrap').innerHTML = '<div class="loading">読み込み失敗</div>';
   }
 }
 
+function renderRankings(records) {
+  if (!records || !records.length) {
+    document.getElementById('rankWrap').innerHTML = '<div class="loading">今日はまだ記録がありません</div>';
+    return;
+  }
+  const icons = ['🥇','🥈','🥉','4','5','6','7','8','9','10'];
+  document.getElementById('rankWrap').innerHTML = `
+    <table>
+      <thead><tr><th>順位</th><th>名前</th><th>スコア</th><th>WPM</th><th>正確率</th><th>時間</th><th></th></tr></thead>
+      <tbody>
+        ${records.map((r, i) => `
+          <tr>
+            <td>${icons[i] || i+1}</td>
+            <td style="color:${r.color}">${esc(r.nickname)}</td>
+            <td>${r.score}</td>
+            <td>${r.avgWpm}</td>
+            <td>${r.avgAccuracy}%</td>
+            <td style="color:#555;font-size:.8rem">${r.timestamp || ''}</td>
+            <td><button class="btn btn-danger" onclick="deleteScore(${i})">削除</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function deleteScore(idx) {
+  if (!confirm('このスコアを削除しますか？')) return;
+  try {
+    const res = await fetch(`/api/admin/scores/${idx}`, { method: 'DELETE', headers: { 'x-admin-password': pw } });
+    if (!res.ok) throw new Error();
+    loadRankings();
+  } catch (e) { alert('削除に失敗しました'); }
+}
+
 function esc(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 </body>

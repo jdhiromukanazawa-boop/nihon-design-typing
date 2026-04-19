@@ -25,16 +25,79 @@ let startTime    = 0;
 let leaderboard  = [];
 
 // 入力状態（char-by-char）
-let matchedEPos  = 0;   // 正しく入力済みの expected インデックス
-let currentSeq   = '';  // chi/shi 等 multi-char sequence の途中入力
-let totalKeys    = 0;   // 総キー押下数
-let wrongKeys    = 0;   // ミス回数
-let nPending     = false; // 「ん」の n が pending（nn か単 n か待ち）
-let showingError = false; // エラー表示中
+let matchedEPos   = 0;   // 正しく入力済みの expected インデックス
+let currentSeq    = '';  // chi/shi 等 multi-char sequence の途中入力
+let totalKeys     = 0;   // 総キー押下数
+let wrongKeys     = 0;   // ミス回数
+let nPending      = false; // 「ん」の n が pending（nn か単 n か待ち）
+let showingError  = false; // エラー表示中
+let displayedInput = ''; // ユーザーが実際に打った文字列（表示用）
+
+// ── キーボードレイアウト ──────────────────────────────
+const KB_ROWS = [
+  ['1','2','3','4','5','6','7','8','9','0','-'],
+  ['q','w','e','r','t','y','u','i','o','p'],
+  ['a','s','d','f','g','h','j','k','l'],
+  ['z','x','c','v','b','n','m'],
+];
+
+function buildKeyboard() {
+  const container = document.getElementById('keyboardDisplay');
+  container.innerHTML = '';
+  for (const row of KB_ROWS) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'kb-row';
+    for (const key of row) {
+      const el = document.createElement('div');
+      el.className = 'kb-key';
+      el.dataset.key = key;
+      el.textContent = key === '-' ? '−' : key.toUpperCase();
+      rowEl.appendChild(el);
+    }
+    container.appendChild(rowEl);
+  }
+  const spaceRow = document.createElement('div');
+  spaceRow.className = 'kb-row';
+  const spaceEl = document.createElement('div');
+  spaceEl.className = 'kb-key kb-space';
+  spaceEl.dataset.key = ' ';
+  spaceEl.textContent = 'SPACE';
+  spaceRow.appendChild(spaceEl);
+  container.appendChild(spaceRow);
+}
+
+function getNextKey() {
+  if (!currentText || inputDone) return null;
+  const expected = currentText.input;
+  if (matchedEPos >= expected.length) return null;
+  if (currentSeq.length > 0) {
+    const cands = romajiCandidates(expected, matchedEPos);
+    for (const [, seq] of cands) {
+      if (seq.startsWith(currentSeq)) return seq[currentSeq.length] || null;
+    }
+  }
+  return expected[matchedEPos] || null;
+}
+
+function highlightNextKey() {
+  document.querySelectorAll('.kb-key').forEach(k => k.classList.remove('kb-active'));
+  const next = getNextKey();
+  if (!next) return;
+  const el = document.querySelector(`.kb-key[data-key="${next}"]`);
+  if (el) el.classList.add('kb-active');
+}
+
+function flashKeyPress(ch) {
+  const el = document.querySelector(`.kb-key[data-key="${ch}"]`);
+  if (!el) return;
+  el.classList.add('kb-pressed');
+  setTimeout(() => el.classList.remove('kb-pressed'), 80);
+}
 
 // ── 起動 ──────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   buildLobby();
+  buildKeyboard();
   setupSoundToggle();
   setupSpaceStart();
   setupGameScreenFocus();
@@ -165,12 +228,13 @@ function showText(idx) {
   document.getElementById('wpmLabel').textContent      = '— WPM';
   document.getElementById('textResultFlash').style.display = 'none';
 
-  matchedEPos  = 0;
-  currentSeq   = '';
-  totalKeys    = 0;
-  wrongKeys    = 0;
-  nPending     = false;
-  showingError = false;
+  matchedEPos   = 0;
+  currentSeq    = '';
+  totalKeys     = 0;
+  wrongKeys     = 0;
+  nPending      = false;
+  showingError  = false;
+  displayedInput = '';
 
   const input = document.getElementById('typingInput');
   input.value    = '';
@@ -180,7 +244,8 @@ function showText(idx) {
   input.onkeydown = onKeydown;
   input.oninput   = null;
 
-  renderCharPreview('');
+  renderCharPreview(0, false);
+  highlightNextKey();
   buildProgressDots(idx, gameTexts.length);
   startTimer();
   showScreen('game');
@@ -240,14 +305,19 @@ function processChar(ch) {
     nPending   = false;
     currentSeq = '';
     matchedEPos++; // n 確定（1文字前進）
-    if (matchedEPos >= expected.length) { _completeTyping(); return; }
 
     if (ch === 'n') {
-      // nn の2文字目 → ん確定済み、この n は消費済み
+      // nn の2文字目 → ん確定（nn として打った）
+      displayedInput += 'nn';
+      playTypingSound();
+      flashKeyPress('n');
+      if (matchedEPos >= expected.length) { _completeTyping(); return; }
       _updateDisplay();
       return;
     }
-    // nn でなかった → n は単独で確定済み、続けて ch を処理
+    // nn でなかった → n は単独で確定
+    displayedInput += 'n';
+    if (matchedEPos >= expected.length) { _completeTyping(); return; }
     _processCharAt(ch);
     return;
   }
@@ -267,6 +337,7 @@ function _processCharAt(ch) {
     nPending = true;
     showingError = false;
     playTypingSound();
+    flashKeyPress(ch);
     _updateDisplay();
     return;
   }
@@ -287,6 +358,8 @@ function _processCharAt(ch) {
 
   if (fullMatch) {
     playTypingSound();
+    flashKeyPress(ch);
+    displayedInput += testSeq; // 実際に打った文字を記録
     matchedEPos += fullMatch[0];
     currentSeq   = '';
     showingError  = false;
@@ -295,6 +368,7 @@ function _processCharAt(ch) {
   } else if (isPrefix) {
     // 途中入力中（例: "c" for "chi"）→ エラーなし、位置は進まない
     playTypingSound();
+    flashKeyPress(ch);
     currentSeq   = testSeq;
     showingError  = false;
     _updateDisplay();
@@ -316,6 +390,7 @@ function _updateDisplay() {
   document.getElementById('accuracyLabel').textContent = `正確率 ${acc}%`;
   document.getElementById('wpmLabel').textContent      = `${wpm} WPM`;
   renderCharPreview(matchedEPos, showingError);
+  highlightNextKey();
 }
 
 function _completeTyping() {
@@ -329,6 +404,7 @@ function _completeTyping() {
 function completeText(wpm, acc, completed) {
   inputDone = true;
   stopTimer();
+  document.querySelectorAll('.kb-key').forEach(k => k.classList.remove('kb-active', 'kb-pressed'));
   const input = document.getElementById('typingInput');
   input.disabled = true;
   input.oninput  = null;
@@ -385,18 +461,16 @@ function finishGame() {
   showResult(score, avgWpm, avgAcc);
 }
 
-// ── スコアに応じたpic選択 ─────────────────────────────
+// ── スコアに応じたpic選択（ランダム要素あり）──────────
 function picForScore(score) {
-  if (score >= 2000) return 10;
-  if (score >= 1600) return 9;
-  if (score >= 1200) return 8;
-  if (score >= 900)  return 7;
-  if (score >= 650)  return 6;
-  if (score >= 450)  return 5;
-  if (score >= 300)  return 4;
-  if (score >= 180)  return 3;
-  if (score >= 80)   return 2;
-  return 1;
+  // スコア帯に応じたベース値（高スコアほど高い番号が出やすい）
+  const base = score >= 1800 ? 8 :
+               score >= 1200 ? 6 :
+               score >= 700  ? 4 :
+               score >= 300  ? 2 : 0;
+  // base〜base+3 の範囲からランダム選択（1〜10にクランプ）
+  const pick = base + Math.floor(Math.random() * 4);
+  return Math.max(1, Math.min(10, pick + 1));
 }
 
 // ── 結果画面 ──────────────────────────────────────────
@@ -448,18 +522,51 @@ function renderLeaderboard(containerId, records) {
 function renderCharPreview(ePos, hasError) {
   const expected = currentText.input;
   let html = '';
-  for (let i = 0; i < expected.length; i++) {
-    const ch = escHtml(expected[i]);
-    if (i < ePos) {
-      html += `<span class="ch-ok">${ch}</span>`;
-    } else if (i === ePos) {
-      if (hasError)      html += `<span class="ch-err">${ch}</span>`;
-      else if (nPending) html += `<span class="ch-pending">${ch}</span>`;
-      else               html += `<span class="ch-cursor">${ch}</span>`;
-    } else {
-      html += `<span class="ch-rest">${ch}</span>`;
+
+  // 1. 確定済み：ユーザーが実際に打った文字（緑）
+  for (const ch of displayedInput) {
+    html += `<span class="ch-ok">${escHtml(ch)}</span>`;
+  }
+
+  if (currentSeq.length > 0 && !hasError) {
+    // 2a. 途中入力中 (e.g. "sy" for "sho"/"syo")
+    for (const ch of currentSeq) {
+      html += `<span class="ch-pending">${escHtml(ch)}</span>`;
+    }
+    // 2b. マッチ中の候補の残り部分
+    const cands = romajiCandidates(expected, ePos);
+    let remSeq = '';
+    let seqLen = 0;
+    for (const [eFwd, seq] of cands) {
+      if (seq.startsWith(currentSeq)) { remSeq = seq.slice(currentSeq.length); seqLen = eFwd; break; }
+    }
+    if (remSeq.length > 0) {
+      html += `<span class="ch-cursor">${escHtml(remSeq[0])}</span>`;
+      for (let i = 1; i < remSeq.length; i++) html += `<span class="ch-rest">${escHtml(remSeq[i])}</span>`;
+    }
+    // 2c. 残りの expected
+    for (const ch of expected.slice(ePos + seqLen)) {
+      html += `<span class="ch-rest">${escHtml(ch)}</span>`;
+    }
+
+  } else if (nPending) {
+    // 3. n pending：'n' を pending 色で表示
+    html += `<span class="ch-pending">n</span>`;
+    for (const ch of expected.slice(ePos + 1)) {
+      html += `<span class="ch-rest">${escHtml(ch)}</span>`;
+    }
+
+  } else {
+    // 4. 通常：カーソル位置 + 残り
+    if (ePos < expected.length) {
+      if (hasError) html += `<span class="ch-err">${escHtml(expected[ePos])}</span>`;
+      else          html += `<span class="ch-cursor">${escHtml(expected[ePos])}</span>`;
+    }
+    for (const ch of expected.slice(ePos + 1)) {
+      html += `<span class="ch-rest">${escHtml(ch)}</span>`;
     }
   }
+
   document.getElementById('charPreview').innerHTML = html;
 }
 

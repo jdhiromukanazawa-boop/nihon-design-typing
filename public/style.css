@@ -434,6 +434,57 @@ html, body {
   font-size: .74rem; color: var(--muted);
 }
 
+/* char area (replaces input-card) */
+.char-area {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+  box-shadow: 0 2px 12px rgba(124,58,237,.06);
+}
+
+/* virtual keyboard */
+.keyboard-display {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  box-shadow: 0 2px 12px rgba(124,58,237,.06);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.kb-row {
+  display: flex; gap: 5px;
+}
+.kb-key {
+  min-width: 34px; height: 34px;
+  border-radius: 6px;
+  background: var(--sur2);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: .72rem; font-weight: 700;
+  color: var(--text-sub);
+  transition: background .1s, border-color .1s, color .1s, box-shadow .1s, transform .08s;
+  user-select: none;
+}
+.kb-key.kb-wide  { min-width: 48px; }
+.kb-key.kb-space { min-width: 180px; font-size: .65rem; letter-spacing: .12em; }
+.kb-key.kb-active {
+  background: #f59e0b;
+  border-color: #d97706;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(245,158,11,.45);
+  transform: translateY(-2px);
+}
+.kb-key.kb-pressed {
+  background: var(--primary);
+  border-color: var(--pri2);
+  color: #fff;
+  transform: translateY(1px);
+  transition: none;
+}
+
 /* progress dots */
 .progress-dots {
   display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-top: auto;
@@ -541,9 +592,9 @@ html, body {
   text-align: center; z-index: 1;
 }
 .score-pic {
-  width: 200px; height: 200px; object-fit: contain;
-  border-radius: 20px;
-  filter: drop-shadow(0 8px 24px rgba(124,58,237,.25));
+  width: min(320px, 80vw); height: min(320px, 80vw); object-fit: contain;
+  border-radius: 24px;
+  filter: drop-shadow(0 12px 32px rgba(124,58,237,.35));
   animation: picPop .5s cubic-bezier(.34,1.56,.64,1);
 }
 @keyframes picPop {

@@ -65,21 +65,23 @@
           <div class="display-romaji" id="displayRomaji"></div>
         </div>
 
-        <div class="input-card">
+        <div class="char-area">
           <div class="char-preview" id="charPreview"></div>
-          <input
-            id="typingInput"
-            type="text"
-            class="typing-input"
-            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-            placeholder="スペースキーは不要です"
-            disabled
-          />
           <div class="input-meta">
             <span id="accuracyLabel">正確率 —</span>
             <span id="wpmLabel">— WPM</span>
           </div>
         </div>
+
+        <div class="keyboard-display" id="keyboardDisplay"></div>
+
+        <input
+          id="typingInput"
+          type="text"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+          style="position:fixed;opacity:0;pointer-events:none;top:0;left:0;width:1px;height:1px;"
+          disabled
+        />
 
         <div class="progress-dots" id="progressDots"></div>
         <div class="text-result-flash" id="textResultFlash"></div>
@@ -126,14 +128,6 @@
         <span class="lbh-time">時間</span>
       </div>
       <div id="resultLeaderboard" class="leaderboard"></div>
-    </div>
-
-    <div class="memory-section">
-      <h3 class="section-label">▶ 思い出の写真</h3>
-      <div class="memory-photos">
-        <img class="memory-photo" src="/avatars/memory1.jpg" alt="思い出の写真1">
-        <img class="memory-photo" src="/avatars/memory2.jpg" alt="思い出の写真2">
-      </div>
     </div>
 
     <button class="btn btn-primary btn-replay" id="replayBtn">もう一回プレイ ▶</button>

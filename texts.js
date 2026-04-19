@@ -50,7 +50,7 @@ const TEXTS = [
   T('選ぶ権利はまだない',               'erabu kenri ha mada nai',                 '社長の名言'),
   T('大変って大きく変わる',             'taihen tte okiku kawaru',                 '社長の名言'),
   T('気付いても大抵やらない',           'kizuite mo taitei yaranai',               '社長の名言'),
-  T('先輩の現在は後輩の将来',           'senpai no genzai ha kohai no shourai',    '社長の名言'),
+  T('先輩の現在は後輩の将来',           'senpai no genzai ha kouhai no shourai',   '社長の名言'),
   T('結果出してから言わないとダサい',   'kekka dashite kara iwa naito dasai',      '社長の名言'),
   T('疲れた凡人ならとっくに倒れてる',   'tsukareta bonjin nara tokkuni taoreteru', '社長の名言'),
   T('変人と言われないと世の中変えれない','henjin to iwarenai to yononaka kaerenai','社長の名言'),
@@ -127,7 +127,7 @@ const TEXTS = [
     '社長の名言', true),
 
   T('ストレスを感じたとき、ストレスを減らそうと思ってはならない',
-    'sutoresu wo kanjita toki sutoresu wo heraso to omotte ha naranai',
+    'sutoresu wo kanjita toki sutoresu wo herasou to omotte ha naranai',
     '社長の名言', true),
 
   T('このギブを貰ったままだとテイカーになってしまう',
@@ -192,6 +192,9 @@ const TEXTS = [
     '社員キーワード'),
   T('人生はシャンパンタワー',
     'jinsei ha shanpan tawa-',
+    '社員キーワード'),
+  T('アルパカ',
+    'arupaka',
     '社員キーワード'),
 
   // ── 大坪さんカルタより（追加分）────────────────────

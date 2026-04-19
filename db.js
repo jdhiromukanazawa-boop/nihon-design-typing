@@ -26,6 +26,18 @@ async function addQuestion({ display, romaji, category, long = false }) {
   return data;
 }
 
+async function updateQuestion(id, { display, romaji, category, long = false }) {
+  const input = romaji.toLowerCase().replace(/ /g, '');
+  const { data, error } = await supabase
+    .from('questions')
+    .update({ display, romaji, input, category, long })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 async function deleteQuestion(id) {
   const { error } = await supabase
     .from('questions')
@@ -86,4 +98,4 @@ async function getTopScores(limit = 30) {
   }));
 }
 
-module.exports = { supabase, getQuestions, addQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores };
+module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores };

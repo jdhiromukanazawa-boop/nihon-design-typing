@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
 const { PLAYERS } = require('./texts');
-const { getQuestions, addQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores } = require('./db');
+const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -79,6 +79,21 @@ app.post('/api/admin/questions', adminAuth, async (req, res) => {
   }
 });
 
+app.patch('/api/admin/questions/:id', adminAuth, async (req, res) => {
+  try {
+    const { display, romaji, category, long } = req.body;
+    if (!display || !romaji || !category) {
+      return res.status(400).json({ error: 'display, romaji, category は必須です' });
+    }
+    const q = await updateQuestion(req.params.id, { display, romaji, category, long: !!long });
+    questionsCache = await getQuestions();
+    res.json(q);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.delete('/api/admin/questions/:id', adminAuth, async (req, res) => {
   try {
     await deleteQuestion(req.params.id);
@@ -88,6 +103,21 @@ app.delete('/api/admin/questions/:id', adminAuth, async (req, res) => {
     console.error(e);
     res.status(500).json({ error: e.message });
   }
+});
+
+// ランキング管理API
+app.get('/api/admin/scores', adminAuth, (req, res) => {
+  res.json(dailyRecords);
+});
+
+app.delete('/api/admin/scores/:idx', adminAuth, (req, res) => {
+  const idx = parseInt(req.params.idx);
+  if (isNaN(idx) || idx < 0 || idx >= dailyRecords.length) {
+    return res.status(400).json({ error: '無効なインデックス' });
+  }
+  dailyRecords.splice(idx, 1);
+  io.emit('leaderboardUpdate', dailyRecords);
+  res.json({ ok: true });
 });
 
 // ── Socket.IO ─────────────────────────────────────
