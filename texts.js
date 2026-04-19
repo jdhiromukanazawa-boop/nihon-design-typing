@@ -186,6 +186,9 @@ const TEXTS = [
   T('ミスドでバイト',
     'misudo de baito',
     '社員キーワード'),
+  T('ワンモア！モアイズ',
+    'wan moa moa izu',
+    '社員キーワード'),
 ];
 
 module.exports = { PLAYERS, TEXTS };
