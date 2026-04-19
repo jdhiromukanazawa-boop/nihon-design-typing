@@ -173,6 +173,16 @@ const TEXTS = [
   T('こんな良い人っているんだって思う',
     'konna ii hito tte iru n da tte omou',
     'みわからひろむへ', true),
+
+  T('私が！私が！私が！',
+    'watashi ga watashi ga watashi ga',
+    '社長の名言'),
+  T('有限会社阿部製麺所',
+    'yuugen gaisha abe seimensho',
+    '会社名'),
+  T('剣道14年',
+    'kendou juuyon nen',
+    '社長の名言'),
 ];
 
 module.exports = { PLAYERS, TEXTS };
