@@ -11,6 +11,25 @@ const PLAYER_DEFS = [
 
 const RANK_ICONS = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
 
+const PIC_INFO = [
+  null,
+  { title: 'まだ諦めてない精神は褒めたい', rarity: 1 },
+  { title: '次回に期待している', rarity: 1 },
+  { title: 'まあ悪くはないと思う…たぶん', rarity: 2 },
+  { title: 'これは才能の片鱗を感じる', rarity: 2 },
+  { title: 'ちょっと待って本当に上手い', rarity: 3 },
+  { title: '指が人間のものではない', rarity: 3 },
+  { title: '会社の星に認定します', rarity: 4 },
+  { title: '大坪さんに見せたいやつ', rarity: 4 },
+  { title: '伝説の誕生を目撃した', rarity: 5 },
+  { title: '神・ゲーム・タイピング', rarity: 5 },
+];
+
+function starsHtml(rarity) {
+  return '<span class="stars-filled">' + '★'.repeat(rarity) + '</span>' +
+         '<span class="stars-empty">' + '☆'.repeat(5 - rarity) + '</span>';
+}
+
 // ── 状態 ──────────────────────────────────────────────
 let socket;
 let myPlayer     = null;
@@ -34,24 +53,29 @@ let showingError  = false; // エラー表示中
 let displayedInput = ''; // ユーザーが実際に打った文字列（表示用）
 
 // ── キーボードレイアウト ──────────────────────────────
-const KB_ROWS = [
-  ['1','2','3','4','5','6','7','8','9','0','-'],
-  ['q','w','e','r','t','y','u','i','o','p'],
-  ['a','s','d','f','g','h','j','k','l'],
-  ['z','x','c','v','b','n','m'],
+const KB_LAYOUT = [
+  ['1','2','3','4','5','6','7','8','9','0','-','^','¥'],
+  ['q','w','e','r','t','y','u','i','o','p','@','['],
+  ['a','s','d','f','g','h','j','k','l',';',':',']'],
+  ['SHIFT','z','x','c','v','b','n','m',',','.','/','_','SHIFT'],
 ];
 
 function buildKeyboard() {
   const container = document.getElementById('keyboardDisplay');
   container.innerHTML = '';
-  for (const row of KB_ROWS) {
+  for (const row of KB_LAYOUT) {
     const rowEl = document.createElement('div');
     rowEl.className = 'kb-row';
     for (const key of row) {
       const el = document.createElement('div');
-      el.className = 'kb-key';
-      el.dataset.key = key;
-      el.textContent = key === '-' ? '−' : key.toUpperCase();
+      if (key === 'SHIFT') {
+        el.className = 'kb-key kb-shift';
+        el.textContent = 'Shift';
+      } else {
+        el.className = 'kb-key';
+        el.dataset.key = key;
+        el.textContent = key === '-' ? '−' : /^[a-z]$/.test(key) ? key.toUpperCase() : key;
+      }
       rowEl.appendChild(el);
     }
     container.appendChild(rowEl);
@@ -162,6 +186,11 @@ function selectPlayer(id) {
   card.classList.remove('mine-pop');
   void card.offsetWidth;
   card.classList.add('mine-pop');
+  const guestWrap = document.getElementById('guestNameWrap');
+  if (guestWrap) {
+    guestWrap.style.display = id === 'guest' ? 'block' : 'none';
+    if (id === 'guest') setTimeout(() => document.getElementById('guestNameInput').focus(), 50);
+  }
   const btn = document.getElementById('startBtn');
   btn.disabled = false;
   document.getElementById('startHint').style.display = 'block';
@@ -179,6 +208,10 @@ function setupSpaceStart() {
 function requestStart() {
   if (!myPlayer) return;
   ensureAudio();
+  if (myPlayer.id === 'guest') {
+    const name = document.getElementById('guestNameInput').value.trim();
+    if (name) myPlayer = { ...myPlayer, nickname: name, name: name };
+  }
   document.getElementById('startBtn').disabled = true;
   document.getElementById('startHint').style.display = 'none';
   socket.emit('startGame', { playerId: myPlayer.id });
@@ -216,7 +249,7 @@ function beginGame(texts) {
 function showText(idx) {
   currentText = gameTexts[idx];
   inputDone   = false;
-  timeLeft    = currentText.long ? 60 : 30;
+  timeLeft    = currentText.long ? 30 : 15;
   startTime   = Date.now();
 
   document.getElementById('roundNum').textContent      = idx + 1;
@@ -485,6 +518,9 @@ function showResult(score, avgWpm, avgAcc) {
   const picEl  = document.getElementById('scorePic');
   picEl.src    = `/avatars/pic${picNum}.jpg`;
   picEl.alt    = `スコアキャラクター lv${picNum}`;
+  const info = PIC_INFO[picNum] || PIC_INFO[1];
+  document.getElementById('picTitle').textContent = `「${info.title}」`;
+  document.getElementById('picRarity').innerHTML = starsHtml(info.rarity);
 
   renderLeaderboard('resultLeaderboard', leaderboard);
   spawnConfetti();
@@ -514,8 +550,17 @@ function renderLeaderboard(containerId, records) {
       <span class="lb-wpm">${r.avgWpm}</span>
       <span class="lb-acc">${r.avgAccuracy}%</span>
       <span class="lb-time">${r.timestamp}</span>
+      <button class="lb-del" onclick="deleteScore(${i})" title="削除">✕</button>
     </div>
   `).join('');
+}
+
+async function deleteScore(idx) {
+  if (!confirm('このスコアを削除しますか？')) return;
+  await fetch(`/api/admin/scores/${idx}`, {
+    method: 'DELETE',
+    headers: { 'X-Admin-Password': 'kanazawa' },
+  });
 }
 
 // ── charプレビュー ────────────────────────────────────

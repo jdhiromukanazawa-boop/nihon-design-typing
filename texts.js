@@ -77,7 +77,7 @@ const TEXTS = [
   T('心が強い奴に心を任せる',           'kokoro ga tsuyoi yatsu ni kokoro wo makaseru', '社長の名言'),
 
   // ── 長文（long: true）────────────────────────────
-  T('日本人の生き方・働き方をより幸せにする',
+  T('日本人の生き方 働き方をより幸せにする',
     'nihon jin no ikikata hatarakikata wo yori shiawase ni suru',
     'ミッション', true),
 
@@ -122,11 +122,11 @@ const TEXTS = [
     'jibun no ganmen naguri makutta yo ne sono toki ha',
     '社長の名言', true),
 
-  T('子供に選ばれる会社ではなく、大人に選ばれる会社',
+  T('子供に選ばれる会社ではなく 大人に選ばれる会社',
     'kodomo ni erabareru kaisha de ha naku otona ni erabareru kaisha',
     '社長の名言', true),
 
-  T('ストレスを感じたとき、ストレスを減らそうと思ってはならない',
+  T('ストレスを感じたとき ストレスを減らそうと思ってはならない',
     'sutoresu wo kanjita toki sutoresu wo herasou to omotte ha naranai',
     '社長の名言', true),
 
@@ -138,7 +138,7 @@ const TEXTS = [
     'dou shitara dekiru ka wo kangaeru no ga otona',
     '社長の名言', true),
 
-  T('高め合うパートナーでない限り、そのパートナーは必ずあなたの足を引っ張る',
+  T('高め合うパートナーでない限り そのパートナーは必ずあなたの足を引っ張る',
     'takame au pa-tona- de nai kagiri sono pa-tona- ha kanarazu anata no ashi wo hipparu',
     '社長の名言', true),
 
@@ -155,11 +155,11 @@ const TEXTS = [
     'hiromu san to hanasu to shigoto toka sore igai no koto mo zenbu ganbarou tte omou',
     '感謝のメッセージ', true),
 
-  T('ひろむさんと話して自分の気持ちが前向きに変わって、取り組むことができる',
+  T('ひろむさんと話して自分の気持ちが前向きに変わって 取り組むことができる',
     'hiromu san to hanashite jibun no kimochi ga maemuki ni kawatte torikumu koto ga dekiru',
     '感謝のメッセージ', true),
 
-  T('いつもひろむさんは気持ちが前向きになるような話し方、接し方をしてくれる',
+  T('いつもひろむさんは気持ちが前向きになるような話し方 接し方をしてくれる',
     'itsumo hiromu san ha kimochi ga maemuki ni naru you na hanashikata sesshikata wo shite kureru',
     '感謝のメッセージ', true),
 
