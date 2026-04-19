@@ -12,6 +12,7 @@ const PLAYERS = [
   { id: 'hakoyama', name: '箱山',   nickname: 'ほたて',     color: '#00B4D8' },
   { id: 'miwa',     name: '三輪',   nickname: 'みわちゃん', color: '#06D6A0' },
   { id: 'furuta',   name: '古田',   nickname: 'マリメッコ', color: '#FFB703' },
+  { id: 'guest',    name: 'ゲスト', nickname: 'ゲスト',     color: '#9CA3AF' },
 ];
 
 function T(display, romaji, category, long = false) {
@@ -118,7 +119,7 @@ const TEXTS = [
     '社長の名言', true),
 
   T('自分の顔面殴りまくったよね その時は',
-    'jibun no ganmen naguri makutta yo ne sono toki wa',
+    'jibun no ganmen naguri makutta yo ne sono toki ha',
     '社長の名言', true),
 
   T('子供に選ばれる会社ではなく、大人に選ばれる会社',
@@ -144,35 +145,35 @@ const TEXTS = [
   // ── みわちゃんからひろむさんへ ──────────────────
   T('ひろむさんが一緒に成長していこうって言ってくださったこと、とても嬉しかったです',
     'hiromu san ga issho ni seichou shite ikou tte itte kudasatta koto totemo ureshikatta desu',
-    'みわからひろむへ', true),
+    '感謝のメッセージ', true),
 
   T('でもひろむさんみたいな人になりたいので頑張ります',
     'demo hiromu san mitaina hito ni naritai no de ganbarimasu',
-    'みわからひろむへ', true),
+    '感謝のメッセージ', true),
 
   T('ひろむさんが元気にいると仕事とかそれ以外のことも全部頑張ろうって思う',
     'hiromu san ga genki ni iru to shigoto toka sore igai no koto mo zenbu ganbarou tte omou',
-    'みわからひろむへ', true),
+    '感謝のメッセージ', true),
 
   T('ひろむさんと話して自分の気持ちが前向きに変わって、取り組むことができる',
     'hiromu san to hanashite jibun no kimochi ga maemuki ni kawatte torikumu koto ga dekiru',
-    'みわからひろむへ', true),
+    '感謝のメッセージ', true),
 
   T('いつもひろむさんは気持ちが前向きになるような話し方、接し方をしてくれる',
     'itsumo hiromu san ha kimochi ga maemuki ni naru you na hanashikata sesshikata wo shite kureru',
-    'みわからひろむへ', true),
+    '感謝のメッセージ', true),
 
   T('ひろむさんと話したかっこいい人になれるようがんばります',
-    'hiromu san to hanashita kakkoi hito ni nareru you ganbarimasu',
-    'みわからひろむへ', true),
+    'hiromu san to hanashita kakkoii hito ni nareru you ganbarimasu',
+    '感謝のメッセージ', true),
 
   T('ひろむさんに何かをあげれるような人になりたいです',
     'hiromu san ni nanika wo agereru you na hito ni naritai desu',
-    'みわからひろむへ', true),
+    '感謝のメッセージ', true),
 
   T('こんな良い人っているんだって思う',
     'konna ii hito tte iru n da tte omou',
-    'みわからひろむへ', true),
+    '感謝のメッセージ', true),
 
   T('私が！私が！私が！',
     'watashi ga watashi ga watashi ga',
@@ -183,11 +184,14 @@ const TEXTS = [
   T('剣道14年',
     'kendou juuyon nen',
     '社員キーワード'),
-  T('ミスドでバイト',
-    'misudo de baito',
+  T('ホタテとミスドの二刀流',
+    'hotate to misudo no nitouryuu',
     '社員キーワード'),
   T('ワンモア！モアイズ',
     'wan moa moa izu',
+    '社員キーワード'),
+  T('人生はシャンパンタワー',
+    'jinsei ha shanpan tawa-',
     '社員キーワード'),
 ];
 

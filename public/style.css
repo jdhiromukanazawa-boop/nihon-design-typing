@@ -153,10 +153,25 @@ html, body {
 .player-card.taken  { opacity: .4; cursor: not-allowed; }
 .player-card.mine {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(124,58,237,.15), 0 10px 28px rgba(124,58,237,.2);
-  opacity: 1; cursor: default; transform: none;
+  border-width: 3px;
+  box-shadow: 0 0 0 4px rgba(124,58,237,.2), 0 12px 36px rgba(124,58,237,.3);
+  opacity: 1; cursor: default;
+  background: linear-gradient(160deg, #fdf4ff 0%, #fff 100%);
+  animation: mineGlow 2s ease-in-out infinite;
 }
 .player-card.mine::after { opacity: 1; }
+.player-card.mine-pop {
+  animation: minePop .4s cubic-bezier(.34,1.56,.64,1) forwards, mineGlow 2s ease-in-out 0.4s infinite !important;
+}
+@keyframes minePop {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.12); }
+  100% { transform: scale(1.05); }
+}
+@keyframes mineGlow {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(124,58,237,.2), 0 12px 36px rgba(124,58,237,.3); }
+  50%      { box-shadow: 0 0 0 6px rgba(236,72,153,.25), 0 14px 40px rgba(236,72,153,.3); }
+}
 
 .avatar-img {
   width: 80px; height: 80px;
@@ -167,7 +182,14 @@ html, body {
 }
 .player-card.mine .avatar-img {
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(124,58,237,.15), 0 0 18px rgba(124,58,237,.3);
+  border-width: 4px;
+  box-shadow: 0 0 0 4px rgba(124,58,237,.2), 0 0 24px rgba(124,58,237,.4);
+  animation: avatarSpin 6s linear infinite;
+}
+@keyframes avatarSpin {
+  from { box-shadow: 0 0 0 4px rgba(124,58,237,.2), 0 0 24px rgba(124,58,237,.4); border-color: var(--primary); }
+  50%  { box-shadow: 0 0 0 4px rgba(236,72,153,.3), 0 0 24px rgba(236,72,153,.4); border-color: var(--accent); }
+  to   { box-shadow: 0 0 0 4px rgba(124,58,237,.2), 0 0 24px rgba(124,58,237,.4); border-color: var(--primary); }
 }
 .player-card.ready-state .avatar-img {
   border-color: var(--green);
@@ -176,6 +198,17 @@ html, body {
 
 .p-name  { font-weight: 800; font-size: 1.05rem; color: var(--text); }
 .p-nick  { font-size: .8rem; color: var(--text-sub); margin-top: 3px; }
+
+.mine-badge {
+  display: none;
+  position: absolute; top: 8px; left: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  color: #fff; font-size: .62rem; font-weight: 900;
+  padding: 3px 9px; border-radius: 999px;
+  letter-spacing: .05em;
+  animation: readyPop .3s cubic-bezier(.34,1.56,.64,1);
+}
+.player-card.mine .mine-badge { display: block; }
 
 .ready-pip {
   display: none;
@@ -368,10 +401,16 @@ html, body {
   min-height: 1.6em; line-height: 1.6;
   word-break: break-all; color: var(--text);
 }
-.ch-ok     { color: var(--primary); }
-.ch-err    { color: var(--red); background: rgba(239,68,68,.1); border-radius: 3px; }
-.ch-cursor { border-left: 2.5px solid var(--accent); animation: blink .7s step-end infinite; }
-.ch-rest   { color: var(--muted); }
+.ch-ok      { color: var(--primary); }
+.ch-err     { color: var(--red); background: rgba(239,68,68,.1); border-radius: 3px; animation: errShake .15s ease; }
+.ch-cursor  { border-left: 2.5px solid var(--accent); animation: blink .7s step-end infinite; }
+.ch-pending { color: var(--acc2); border-left: 2.5px solid var(--acc2); }
+.ch-rest    { color: var(--muted); }
+@keyframes errShake {
+  0%,100% { transform: translateX(0); }
+  25%     { transform: translateX(-3px); }
+  75%     { transform: translateX(3px); }
+}
 @keyframes blink { 50% { opacity: 0; } }
 
 .typing-input {

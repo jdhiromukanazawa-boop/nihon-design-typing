@@ -18,8 +18,8 @@ const TEXTS_PER_GAME = 20;
 const REPORT_START = new Date('2026-04-21T00:00:00+09:00');
 const ADMIN_PASSWORD = 'kanazawa';
 
-// 永続スコアキャッシュ（Supabase から取得）
-let scoresCache = [];
+// 今日のスコア（毎日0時にリセット）
+let dailyRecords = [];
 // 問題キャッシュ
 let questionsCache = [];
 
@@ -93,7 +93,7 @@ app.delete('/api/admin/questions/:id', adminAuth, async (req, res) => {
 // ── Socket.IO ─────────────────────────────────────
 io.on('connection', (socket) => {
   console.log(`接続: ${socket.id}`);
-  socket.emit('leaderboardUpdate', scoresCache);
+  socket.emit('leaderboardUpdate', dailyRecords);
 
   socket.on('startGame', ({ playerId }) => {
     if (!PLAYERS.find(p => p.id === playerId)) return;
@@ -112,20 +112,31 @@ io.on('connection', (socket) => {
       score:       Math.round(score),
       avgWpm:      Math.round(avgWpm),
       avgAccuracy: Math.round(avgAccuracy),
+      timestamp:   new Date().toLocaleString('ja-JP', {
+        timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }),
     };
 
-    try {
-      await saveScore(rounded);
-      scoresCache = await getTopScores();
-      io.emit('leaderboardUpdate', scoresCache);
-      console.log(`[Score] ${rounded.nickname} ${rounded.score}pt (${rounded.avgWpm}WPM / ${rounded.avgAccuracy}%)`);
-    } catch (e) {
-      console.error('[Score] 保存エラー:', e.message);
-    }
+    dailyRecords.push(rounded);
+    dailyRecords.sort((a, b) => b.score - a.score);
+    if (dailyRecords.length > 30) dailyRecords = dailyRecords.slice(0, 30);
+    io.emit('leaderboardUpdate', dailyRecords);
+    console.log(`[Score] ${rounded.nickname} ${rounded.score}pt (${rounded.avgWpm}WPM / ${rounded.avgAccuracy}%)`);
+
+    // Supabase に永続保存（非同期・失敗しても続行）
+    saveScore(rounded).catch(e => console.error('[Score] 保存エラー:', e.message));
   });
 
   socket.on('disconnect', () => console.log(`切断: ${socket.id}`));
 });
+
+// 日次リセット（0:00 JST）
+cron.schedule('0 0 * * *', () => {
+  console.log('[Cron] 日次リセット');
+  dailyRecords = [];
+  io.emit('leaderboardUpdate', dailyRecords);
+}, { timezone: 'Asia/Tokyo' });
 
 // 朝の一言（9:00 JST）
 cron.schedule('0 9 * * *', () => {
@@ -138,7 +149,7 @@ cron.schedule('0 9 * * *', () => {
 cron.schedule('0 18 * * *', () => {
   if (!reportEnabled()) return;
   console.log('[Cron] 夕方レポート');
-  report.eveningReport(scoresCache);
+  report.eveningReport(dailyRecords);
 }, { timezone: 'Asia/Tokyo' });
 
 // ── 起動 ──────────────────────────────────────────
@@ -152,14 +163,6 @@ const PORT = process.env.PORT || 3000;
   } catch (e) {
     console.error('[DB] 接続エラー:', e.message);
     process.exit(1);
-  }
-
-  try {
-    scoresCache = await getTopScores();
-    console.log(`[DB] ${scoresCache.length}件のスコアを読み込みました`);
-  } catch (e) {
-    console.warn('[DB] スコア読み込みエラー（続行）:', e.message);
-    scoresCache = [];
   }
 
   server.listen(PORT, () => {

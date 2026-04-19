@@ -6,6 +6,7 @@ const PLAYER_DEFS = [
   { id: 'hakoyama', name: '箱山',   nickname: 'ほたて',     color: '#00B4D8', avatar: '/avatars/hakoyama.jpg' },
   { id: 'miwa',     name: '三輪',   nickname: 'みわちゃん', color: '#06D6A0', avatar: '/avatars/miwa.png'     },
   { id: 'furuta',   name: '古田',   nickname: 'マリメッコ', color: '#FFB703', avatar: '/avatars/furuta.jpg'   },
+  { id: 'guest',    name: 'ゲスト', nickname: 'ゲスト',     color: '#9CA3AF', avatar: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Ccircle cx='40' cy='40' r='40' fill='%239CA3AF'/%3E%3Ctext x='40' y='54' font-size='36' text-anchor='middle' fill='white' font-family='sans-serif'%3EG%3C/text%3E%3C/svg%3E" },
 ];
 
 const RANK_ICONS = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
@@ -22,6 +23,14 @@ let timerHandle  = null;
 let timeLeft     = 60;
 let startTime    = 0;
 let leaderboard  = [];
+
+// 入力状態（char-by-char）
+let matchedEPos  = 0;   // 正しく入力済みの expected インデックス
+let currentSeq   = '';  // chi/shi 等 multi-char sequence の途中入力
+let totalKeys    = 0;   // 総キー押下数
+let wrongKeys    = 0;   // ミス回数
+let nPending     = false; // 「ん」の n が pending（nn か単 n か待ち）
+let showingError = false; // エラー表示中
 
 // ── 起動 ──────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -66,7 +75,8 @@ function buildLobby() {
     card.className = 'player-card';
     card.id = `card-${p.id}`;
     card.innerHTML = `
-      <img class="avatar-img" src="${p.avatar}" alt="${p.name}" onerror="this.src='/avatars/fallback.png'">
+      <div class="mine-badge">✓ 選択中</div>
+      <img class="avatar-img" src="${p.avatar}" alt="${p.name}" onerror="this.style.display='none'">
       <div class="p-name">${p.name}</div>
       <div class="p-nick">${p.nickname}</div>
     `;
@@ -79,10 +89,16 @@ function buildLobby() {
 
 function selectPlayer(id) {
   if (myPlayer) {
-    document.getElementById(`card-${myPlayer.id}`).classList.remove('mine');
+    const prev = document.getElementById(`card-${myPlayer.id}`);
+    prev.classList.remove('mine', 'mine-pop');
   }
   myPlayer = PLAYER_DEFS.find(p => p.id === id);
-  document.getElementById(`card-${id}`).classList.add('mine');
+  const card = document.getElementById(`card-${id}`);
+  card.classList.add('mine');
+  // ポップアニメーションをトリガー
+  card.classList.remove('mine-pop');
+  void card.offsetWidth;
+  card.classList.add('mine-pop');
   const btn = document.getElementById('startBtn');
   btn.disabled = false;
   document.getElementById('startHint').style.display = 'block';
@@ -149,13 +165,20 @@ function showText(idx) {
   document.getElementById('wpmLabel').textContent      = '— WPM';
   document.getElementById('textResultFlash').style.display = 'none';
 
+  matchedEPos  = 0;
+  currentSeq   = '';
+  totalKeys    = 0;
+  wrongKeys    = 0;
+  nPending     = false;
+  showingError = false;
+
   const input = document.getElementById('typingInput');
   input.value    = '';
   input.disabled = false;
   input.focus();
   requestAnimationFrame(() => input.focus()); // カウントダウン後のフォーカスブロック対策
-  input.onkeydown = e => { if (e.key === ' ') e.preventDefault(); };
-  input.oninput   = onInput;
+  input.onkeydown = onKeydown;
+  input.oninput   = null;
 
   renderCharPreview('');
   buildProgressDots(idx, gameTexts.length);
@@ -170,9 +193,9 @@ function romajiCandidates(exp, pos) {
   const e2 = exp.slice(pos, pos + 2);
   const e1 = exp[pos];
 
-  // 3文字パターン（長い方から先にチェック）
+  // 3文字パターン
   const map3 = { chi:['chi','ti'], shi:['shi','si'], tsu:['tsu','tu'],
-                 sha:['sha','sya'], shi:['shi','si'], shu:['shu','syu'], sho:['sho','syo'],
+                 sha:['sha','sya'], shu:['shu','syu'], sho:['sho','syo'],
                  cha:['cha','tya'], chu:['chu','tyu'], cho:['cho','tyo'],
                  dzu:['dzu','du'] };
   if (map3[e3]) return map3[e3].map(t => [3, t]);
@@ -181,12 +204,11 @@ function romajiCandidates(exp, pos) {
   const map2 = { fu:['fu','hu'], ji:['ji','zi'] };
   if (map2[e2]) return map2[e2].map(t => [2, t]);
 
-  // 「ん」(n) の処理
+  // 「ん」(n) の処理：次が子音か末尾なら nn も OK
   if (e1 === 'n') {
     const next = exp[pos + 1];
-    // 次が子音（母音・n・y以外）か末尾 → n でも nn でも OK
     if (!next || !'aiueoyn'.includes(next)) {
-      return [[1, 'n'], [1, 'nn']];
+      return [[1, 'n'], [2, 'nn']];
     }
     return [[1, 'n']];
   }
@@ -194,45 +216,113 @@ function romajiCandidates(exp, pos) {
   return e1 ? [[1, e1]] : [];
 }
 
-function matchRomaji(expected, typed) {
-  let ePos = 0, tPos = 0;
-  while (ePos < expected.length && tPos < typed.length) {
-    const cands = romajiCandidates(expected, ePos);
-    let matched = false;
-    for (const [eFwd, tSeq] of cands) {
-      if (typed.slice(tPos).startsWith(tSeq)) {
-        ePos += eFwd; tPos += tSeq.length;
-        matched = true; break;
-      }
-    }
-    if (!matched) return { ePos, tPos, error: true, done: false };
-  }
-  return { ePos, tPos, error: false, done: ePos >= expected.length };
+// ── キーボード入力（char-by-char）────────────────────
+function onKeydown(e) {
+  if (inputDone) return;
+
+  // Backspace/Delete は無効
+  if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); return; }
+
+  // 制御キーは無視
+  if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === ' ') { e.preventDefault(); return; }
+
+  e.preventDefault();
+  processChar(e.key.toLowerCase());
 }
 
-// ── 入力処理 ──────────────────────────────────────────
-function onInput(e) {
-  if (inputDone) return;
-  const typed    = e.target.value;
+function processChar(ch) {
   const expected = currentText.input;
+  totalKeys++;
 
-  playTypingSound();
+  // 「ん」の n が pending 中
+  if (nPending) {
+    nPending   = false;
+    currentSeq = '';
+    matchedEPos++; // n 確定（1文字前進）
+    if (matchedEPos >= expected.length) { _completeTyping(); return; }
 
-  const { ePos, tPos, error, done } = matchRomaji(expected, typed);
+    if (ch === 'n') {
+      // nn の2文字目 → ん確定済み、この n は消費済み
+      _updateDisplay();
+      return;
+    }
+    // nn でなかった → n は単独で確定済み、続けて ch を処理
+    _processCharAt(ch);
+    return;
+  }
 
-  renderCharPreview(ePos, error);
+  _processCharAt(ch);
+}
 
+function _processCharAt(ch) {
+  const expected = currentText.input;
+  if (matchedEPos >= expected.length) return;
+
+  const cands = romajiCandidates(expected, matchedEPos);
+  const testSeq = currentSeq + ch;
+
+  // 「ん」n の ambiguity 処理（currentSeq が空の場合のみ）
+  if (currentSeq === '' && ch === 'n' && cands.some(([, s]) => s === 'nn')) {
+    nPending = true;
+    showingError = false;
+    playTypingSound();
+    _updateDisplay();
+    return;
+  }
+
+  // 完全一致チェック
+  let fullMatch = null;
+  for (const [eFwd, tSeq] of cands) {
+    if (tSeq === testSeq) { fullMatch = [eFwd, tSeq]; break; }
+  }
+
+  // prefix チェック（chi → c → ch → chi など）
+  let isPrefix = false;
+  if (!fullMatch) {
+    for (const [, tSeq] of cands) {
+      if (tSeq.startsWith(testSeq) && tSeq.length > testSeq.length) { isPrefix = true; break; }
+    }
+  }
+
+  if (fullMatch) {
+    playTypingSound();
+    matchedEPos += fullMatch[0];
+    currentSeq   = '';
+    showingError  = false;
+    _updateDisplay();
+    if (matchedEPos >= expected.length) _completeTyping();
+  } else if (isPrefix) {
+    // 途中入力中（例: "c" for "chi"）→ エラーなし、位置は進まない
+    playTypingSound();
+    currentSeq   = testSeq;
+    showingError  = false;
+    _updateDisplay();
+  } else {
+    // ミス
+    wrongKeys++;
+    showingError = true;
+    // currentSeq はリセット（途中の不正入力をクリア）
+    currentSeq = '';
+    playErrorSound();
+    _updateDisplay();
+  }
+}
+
+function _updateDisplay() {
   const elapsed = (Date.now() - startTime) / 60000;
-  const wpm = elapsed > 0 ? Math.round((ePos / 5) / elapsed) : 0;
-  const acc = typed.length > 0 ? Math.min(100, Math.round(ePos / typed.length * 100)) : 100;
+  const wpm = elapsed > 0 ? Math.round((matchedEPos / 5) / elapsed) : 0;
+  const acc = totalKeys > 0 ? Math.round((totalKeys - wrongKeys) / totalKeys * 100) : 100;
   document.getElementById('accuracyLabel').textContent = `正確率 ${acc}%`;
   document.getElementById('wpmLabel').textContent      = `${wpm} WPM`;
+  renderCharPreview(matchedEPos, showingError);
+}
 
-  if (done) {
-    const t    = Date.now() - startTime;
-    const fwpm = Math.round((expected.length / 5) / (t / 60000));
-    completeText(fwpm, 100, true);
-  }
+function _completeTyping() {
+  const t    = Date.now() - startTime;
+  const fwpm = Math.round((currentText.input.length / 5) / (t / 60000));
+  const acc  = totalKeys > 0 ? Math.round((totalKeys - wrongKeys) / totalKeys * 100) : 100;
+  completeText(fwpm, acc, true);
 }
 
 // ── テキスト完了 ──────────────────────────────────────
@@ -363,9 +453,9 @@ function renderCharPreview(ePos, hasError) {
     if (i < ePos) {
       html += `<span class="ch-ok">${ch}</span>`;
     } else if (i === ePos) {
-      html += hasError
-        ? `<span class="ch-err">${ch}</span>`
-        : `<span class="ch-cursor">${ch}</span>`;
+      if (hasError)      html += `<span class="ch-err">${ch}</span>`;
+      else if (nPending) html += `<span class="ch-pending">${ch}</span>`;
+      else               html += `<span class="ch-cursor">${ch}</span>`;
     } else {
       html += `<span class="ch-rest">${ch}</span>`;
     }
@@ -460,6 +550,23 @@ function playTypingSound() {
   gain.connect(masterGain);
   osc.start(now);
   osc.stop(now + 0.05);
+}
+
+// ── エラー音 ──────────────────────────────────────────
+function playErrorSound() {
+  if (!soundEnabled || !audioCtx) return;
+  const osc  = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const now  = audioCtx.currentTime;
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(200, now);
+  osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+  gain.gain.setValueAtTime(0.15, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(now);
+  osc.stop(now + 0.15);
 }
 
 // ── BGM（疾走感） ─────────────────────────────────────
