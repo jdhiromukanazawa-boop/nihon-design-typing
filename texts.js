@@ -46,15 +46,15 @@ const TEXTS = [
   T('順調？',                           'junchou',                                 '社長の名言'),
   T('もう一回とかない',                 'mou ikkai toka nai',                      '社長の名言'),
   T('量より質よりスピード',             'ryou yori shitsu yori supi-do',           '社長の名言'),
-  T('選ぶ権利はまだない',               'erabu kenri wa mada nai',                 '社長の名言'),
+  T('選ぶ権利はまだない',               'erabu kenri ha mada nai',                 '社長の名言'),
   T('大変って大きく変わる',             'taihen tte okiku kawaru',                 '社長の名言'),
   T('気付いても大抵やらない',           'kizuite mo taitei yaranai',               '社長の名言'),
-  T('先輩の現在は後輩の将来',           'senpai no genzai wa kohai no shourai',    '社長の名言'),
+  T('先輩の現在は後輩の将来',           'senpai no genzai ha kohai no shourai',    '社長の名言'),
   T('結果出してから言わないとダサい',   'kekka dashite kara iwa naito dasai',      '社長の名言'),
   T('疲れた凡人ならとっくに倒れてる',   'tsukareta bonjin nara tokkuni taoreteru', '社長の名言'),
   T('変人と言われないと世の中変えれない','henjin to iwarenai to yononaka kaerenai','社長の名言'),
-  T('生きる力は働く力から',             'ikiru chikara wa hataraku chikara kara',  '社長の名言'),
-  T('親はたいてい害でしかない',         'oya wa taitei gai de shika nai',          '社長の名言'),
+  T('生きる力は働く力から',             'ikiru chikara ha hataraku chikara kara',  '社長の名言'),
+  T('親はたいてい害でしかない',         'oya ha taitei gai de shika nai',          '社長の名言'),
   T('簡単な算数なのよ',                 'kantan na sansuu na no yo',               '社長の名言'),
   T('クズほどよく食べる',               'kuzu hodo yoku taberu',                   '社長の名言'),
   T('日頃の積み重ね',                   'higoro no tsumikasane',                   '社長の名言'),
@@ -66,13 +66,13 @@ const TEXTS = [
   T('言ったこと守れない人が多い',       'itta koto mamorenai hito ga ooi',         '社長の名言'),
   T('読んでないんだろうね',             'yonde nai n darou ne',                    '社長の名言'),
   T('楽な方にみんな行く',               'raku na hou ni minna iku',                '社長の名言'),
-  T('生きる強さは働く能力に依存する',   'ikiru tsuyosa wa hataraku noryoku ni izon suru', '社長の名言'),
+  T('生きる強さは働く能力に依存する',   'ikiru tsuyosa ha hataraku nouryoku ni izon suru', '社長の名言'),
   T('誰もが誰かのギブを受けている',     'dare mo ga dare ka no gibu wo ukete iru',  '社長の名言'),
   T('そのギブを自分で止めないこと',     'sono gibu wo jibun de tome nai koto',      '社長の名言'),
-  T('強いやつは正しい',                 'tsuyoi yatsu wa tadashii',                 '社長の名言'),
+  T('強いやつは正しい',                 'tsuyoi yatsu ha tadashii',                 '社長の名言'),
   T('優しい奴が偉い',                   'yasashii yatsu ga erai',                   '社長の名言'),
   T('情熱と冷静の間にベストがある',     'jounetsu to reisei no aida ni besuto ga aru', '社長の名言'),
-  T('従わせるのではなく従われる',       'shitagawaseru no de wa naku shitagawareru','社長の名言'),
+  T('従わせるのではなく従われる',       'shitagawaseru no de ha naku shitagawareru','社長の名言'),
   T('心が強い奴に心を任せる',           'kokoro ga tsuyoi yatsu ni kokoro wo makaseru', '社長の名言'),
 
   // ── 長文（long: true）────────────────────────────
@@ -85,7 +85,7 @@ const TEXTS = [
     'ビジョン', true),
 
   T('働く能力なしに生きる能力なし 生きる力は働く力から生まれる',
-    'hataraku noryoku nashi ni ikiru noryoku nashi ikiru chikara wa hataraku chikara kara umareru',
+    'hataraku nouryoku nashi ni ikiru nouryoku nashi ikiru chikara ha hataraku chikara kara umareru',
     '社長の名言', true),
 
   T('底辺から俺も始まったからね みんなができないはずがない',
@@ -101,7 +101,7 @@ const TEXTS = [
     '社長の名言', true),
 
   T('歯磨きは歯にいいっていうエビデンスひとつもないからね',
-    'hamigaki wa ha ni ii tte iu ebidensu hitotsu mo nai kara ne',
+    'hamigaki ha ha ni ii tte iu ebidensu hitotsu mo nai kara ne',
     '社長の名言', true),
 
   T('やりたいとか冗談でも面白くないよね',
@@ -112,9 +112,6 @@ const TEXTS = [
     'ronbun toka shakaijin ni natte kara kakanai yo ne',
     '社長の名言', true),
 
-  T('本気じゃないって見ればわかるよね 結果出してから言えよ',
-    'honki ja nai tte mireba wakaru yo ne kekka dashite kara ie yo',
-    '社長の名言', true),
 
   T('どこまでいきたいかっていう話だよね',
     'doko made ikitai ka tte iu hanashi da yo ne',
@@ -125,11 +122,11 @@ const TEXTS = [
     '社長の名言', true),
 
   T('子供に選ばれる会社ではなく、大人に選ばれる会社',
-    'kodomo ni erabareru kaisha de wa naku otona ni erabareru kaisha',
+    'kodomo ni erabareru kaisha de ha naku otona ni erabareru kaisha',
     '社長の名言', true),
 
   T('ストレスを感じたとき、ストレスを減らそうと思ってはならない',
-    'sutoresu wo kanjita toki sutoresu wo heraso to omotte wa naranai',
+    'sutoresu wo kanjita toki sutoresu wo heraso to omotte ha naranai',
     '社長の名言', true),
 
   T('このギブを貰ったままだとテイカーになってしまう',
@@ -141,7 +138,7 @@ const TEXTS = [
     '社長の名言', true),
 
   T('高め合うパートナーでない限り、そのパートナーは必ずあなたの足を引っ張る',
-    'takame au pa-tona- de nai kagiri sono pa-tona- wa kanarazu anata no ashi wo hipparu',
+    'takame au pa-tona- de nai kagiri sono pa-tona- ha kanarazu anata no ashi wo hipparu',
     '社長の名言', true),
 
   // ── みわちゃんからひろむさんへ ──────────────────
