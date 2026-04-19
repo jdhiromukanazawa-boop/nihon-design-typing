@@ -11,3 +11,7 @@ services:
         sync: false
       - key: CHATWORK_ROOM_ID
         sync: false
+      - key: SUPABASE_URL
+        value: https://lvspnevojqvfbawfyiqk.supabase.co
+      - key: SUPABASE_KEY
+        sync: false

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理者画面 | 日本デザイン タイピング</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Helvetica Neue', Arial, sans-serif;
+      background: #0f0f1a;
+      color: #e0e0f0;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; color: #c084fc; }
+    .subtitle { font-size: 0.8rem; color: #666; margin-bottom: 24px; }
+
+    /* ログイン */
+    #loginScreen {
+      max-width: 360px;
+      margin: 80px auto;
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 32px;
+      border: 1px solid #2a2a4a;
+    }
+    #loginScreen h2 { margin-bottom: 20px; color: #c084fc; }
+    .login-error { color: #f87171; font-size: 0.85rem; margin-top: 8px; display: none; }
+
+    /* メイン */
+    #mainScreen { display: none; max-width: 900px; margin: 0 auto; }
+
+    /* フォーム */
+    .card {
+      background: #1a1a2e;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #2a2a4a;
+      margin-bottom: 24px;
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 16px; color: #a0a0c0; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-full { grid-column: 1 / -1; }
+    label { font-size: 0.78rem; color: #888; display: block; margin-bottom: 4px; }
+    input[type="text"], input[type="password"], select {
+      width: 100%;
+      background: #0f0f1a;
+      border: 1px solid #3a3a5a;
+      border-radius: 6px;
+      color: #e0e0f0;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, input[type="password"]:focus {
+      border-color: #c084fc;
+    }
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: #b0b0d0;
+    }
+    input[type="checkbox"] { width: 16px; height: 16px; accent-color: #c084fc; }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #c084fc; color: #0f0f1a; }
+    .btn-danger  { background: #f87171; color: #0f0f1a; padding: 4px 10px; font-size: 0.78rem; }
+    .btn-sm      { padding: 6px 14px; font-size: 0.82rem; }
+
+    .form-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .msg-ok  { color: #4ade80; font-size: 0.82rem; }
+    .msg-err { color: #f87171; font-size: 0.82rem; }
+
+    /* 問題一覧 */
+    .q-count { font-size: 0.82rem; color: #666; margin-bottom: 12px; }
+    .filter-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .filter-row input[type="text"] { max-width: 220px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    thead tr { border-bottom: 1px solid #2a2a4a; }
+    th { text-align: left; padding: 8px 10px; color: #666; font-weight: 500; }
+    td { padding: 8px 10px; border-bottom: 1px solid #1e1e38; vertical-align: top; }
+    tr:hover td { background: #1f1f38; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.72rem;
+      background: #2a2a4a;
+      color: #a0a0c0;
+    }
+    .badge-long { background: #3a2050; color: #c084fc; }
+    .col-display { max-width: 200px; word-break: break-all; }
+    .col-romaji  { max-width: 200px; word-break: break-all; color: #a0c0e0; }
+
+    .loading { color: #666; padding: 20px 0; text-align: center; }
+  </style>
+</head>
+<body>
+
+<!-- ログイン画面 -->
+<div id="loginScreen">
+  <h2>🔐 管理者ログイン</h2>
+  <label>パスワード</label>
+  <input type="password" id="pwInput" placeholder="パスワードを入力" />
+  <div class="login-error" id="loginError">パスワードが違います</div>
+  <div style="margin-top:16px">
+    <button class="btn btn-primary" onclick="login()">ログイン</button>
+  </div>
+</div>
+
+<!-- メイン画面 -->
+<div id="mainScreen">
+  <h1>🎹 タイピングゲーム 管理者画面</h1>
+  <p class="subtitle">問題の追加・削除ができます</p>
+
+  <!-- 追加フォーム -->
+  <div class="card">
+    <h2>＋ 問題を追加</h2>
+    <div class="form-grid">
+      <div class="form-full">
+        <label>表示テキスト（日本語）</label>
+        <input type="text" id="fDisplay" placeholder="例: スピードが命" />
+      </div>
+      <div class="form-full">
+        <label>ローマ字（スペース区切り・伸ばし棒は「-」）</label>
+        <input type="text" id="fRomaji" placeholder="例: supi-do ga inochi" />
+      </div>
+      <div>
+        <label>カテゴリ</label>
+        <input type="text" id="fCategory" placeholder="例: 社長の名言" list="categoryList" />
+        <datalist id="categoryList"></datalist>
+      </div>
+      <div style="display:flex;align-items:flex-end">
+        <div class="checkbox-row">
+          <input type="checkbox" id="fLong" />
+          <label style="margin:0">長文フラグ（60秒・50%出現）</label>
+        </div>
+      </div>
+    </div>
+    <div class="form-footer">
+      <button class="btn btn-primary btn-sm" onclick="addQuestion()">追加する</button>
+      <span id="addMsg"></span>
+    </div>
+  </div>
+
+  <!-- 問題一覧 -->
+  <div class="card">
+    <h2>📋 問題一覧</h2>
+    <div class="filter-row">
+      <input type="text" id="filterText" placeholder="絞り込み..." oninput="renderTable()" />
+      <select id="filterCat" onchange="renderTable()">
+        <option value="">すべてのカテゴリ</option>
+      </select>
+    </div>
+    <div class="q-count" id="qCount"></div>
+    <div id="tableWrap"><div class="loading">読み込み中...</div></div>
+  </div>
+</div>
+
+<script>
+let pw = '';
+let allQuestions = [];
+
+function login() {
+  pw = document.getElementById('pwInput').value;
+  fetch('/api/admin/questions', { headers: { 'x-admin-password': pw } })
+    .then(r => {
+      if (!r.ok) throw new Error();
+      return r.json();
+    })
+    .then(data => {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainScreen').style.display = 'block';
+      allQuestions = data;
+      renderTable();
+      populateCategoryList();
+    })
+    .catch(() => {
+      document.getElementById('loginError').style.display = 'block';
+    });
+}
+
+document.getElementById('pwInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') login();
+});
+
+function populateCategoryList() {
+  const cats = [...new Set(allQuestions.map(q => q.category))].sort();
+  const dl = document.getElementById('categoryList');
+  dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+  const sel = document.getElementById('filterCat');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">すべてのカテゴリ</option>' +
+    cats.map(c => `<option value="${esc(c)}" ${c === current ? 'selected' : ''}>${esc(c)}</option>`).join('');
+}
+
+function renderTable() {
+  const keyword = document.getElementById('filterText').value.toLowerCase();
+  const cat     = document.getElementById('filterCat').value;
+  const filtered = allQuestions.filter(q => {
+    const matchCat  = !cat || q.category === cat;
+    const matchWord = !keyword ||
+      q.display.includes(keyword) || q.romaji.toLowerCase().includes(keyword) || q.category.includes(keyword);
+    return matchCat && matchWord;
+  });
+
+  document.getElementById('qCount').textContent = `${filtered.length} / ${allQuestions.length} 件`;
+
+  if (!filtered.length) {
+    document.getElementById('tableWrap').innerHTML = '<div class="loading">該当なし</div>';
+    return;
+  }
+
+  document.getElementById('tableWrap').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>表示テキスト</th>
+          <th>ローマ字</th>
+          <th>カテゴリ</th>
+          <th>種別</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(q => `
+          <tr>
+            <td style="color:#555">${q.id}</td>
+            <td class="col-display">${esc(q.display)}</td>
+            <td class="col-romaji">${esc(q.romaji)}</td>
+            <td><span class="badge">${esc(q.category)}</span></td>
+            <td>${q.long ? '<span class="badge badge-long">長文</span>' : '<span class="badge">短文</span>'}</td>
+            <td><button class="btn btn-danger" onclick="deleteQuestion(${q.id})">削除</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function addQuestion() {
+  const display  = document.getElementById('fDisplay').value.trim();
+  const romaji   = document.getElementById('fRomaji').value.trim();
+  const category = document.getElementById('fCategory').value.trim();
+  const long     = document.getElementById('fLong').checked;
+  const msg      = document.getElementById('addMsg');
+
+  if (!display || !romaji || !category) {
+    msg.className = 'msg-err';
+    msg.textContent = '表示テキスト・ローマ字・カテゴリは必須です';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/questions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': pw },
+      body: JSON.stringify({ display, romaji, category, long }),
+    });
+    if (!res.ok) {
+      const e = await res.json();
+      throw new Error(e.error);
+    }
+    const q = await res.json();
+    allQuestions.push(q);
+    populateCategoryList();
+    renderTable();
+    document.getElementById('fDisplay').value  = '';
+    document.getElementById('fRomaji').value   = '';
+    document.getElementById('fLong').checked   = false;
+    msg.className = 'msg-ok';
+    msg.textContent = '追加しました！';
+    setTimeout(() => { msg.textContent = ''; }, 3000);
+  } catch (e) {
+    msg.className = 'msg-err';
+    msg.textContent = 'エラー: ' + e.message;
+  }
+}
+
+async function deleteQuestion(id) {
+  if (!confirm('この問題を削除しますか？')) return;
+  try {
+    const res = await fetch(`/api/admin/questions/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-password': pw },
+    });
+    if (!res.ok) throw new Error();
+    allQuestions = allQuestions.filter(q => q.id !== id);
+    populateCategoryList();
+    renderTable();
+  } catch (e) {
+    alert('削除に失敗しました');
+  }
+}
+
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

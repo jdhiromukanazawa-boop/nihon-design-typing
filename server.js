@@ -2,9 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const fetch = require('node-fetch');
 const cron = require('node-cron');
-const { PLAYERS, TEXTS } = require('./texts');
+const { PLAYERS } = require('./texts');
+const { getQuestions, addQuestion, deleteQuestion, initIfEmpty } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -12,355 +12,157 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 app.use(express.static('public'));
+app.use(express.json());
 
-// ─── ゲーム状態 ───────────────────────────────────────
-const MAX_ROUNDS = 10;
-
-let state = createInitialState();
-
-function createInitialState() {
-  return {
-    status: 'lobby',       // lobby | countdown | playing | roundEnd | gameEnd
-    players: {},           // socketId → { id, name, nickname, color, score, ready }
-    round: 0,
-    textQueue: shuffleTexts(),
-    currentText: null,
-    roundResults: [],      // 今ラウンドの完了順
-    countdownTimer: null,
-    roundTimer: null,
-  };
-}
-
-function shuffleTexts() {
-  // 長文は20%の確率でのみ出題
-  const short = TEXTS.filter(t => !t.long);
-  const long  = TEXTS.filter(t => t.long);
-  const pool  = [];
-  for (let i = 0; i < MAX_ROUNDS * 3; i++) {
-    pool.push(Math.random() < 0.2 && long.length
-      ? long[Math.floor(Math.random() * long.length)]
-      : short[Math.floor(Math.random() * short.length)]);
-  }
-  // 重複なしになるよう短文優先でユニーク化
-  const seen = new Set();
-  const unique = [];
-  for (const t of pool) {
-    if (!seen.has(t.input)) { seen.add(t.input); unique.push(t); }
-  }
-  return unique.sort(() => Math.random() - 0.5);
-}
-
-// ─── Socket.io ────────────────────────────────────────
-io.on('connection', (socket) => {
-  console.log(`接続: ${socket.id}`);
-
-  // ロビー参加
-  socket.on('join', ({ playerId }) => {
-    const playerDef = PLAYERS.find(p => p.id === playerId);
-    if (!playerDef) return;
-
-    // 同キャラが既に参加中なら弾く
-    const alreadyJoined = Object.values(state.players).find(p => p.id === playerId);
-    if (alreadyJoined) {
-      socket.emit('joinError', 'そのキャラクターはすでに参加中です');
-      return;
-    }
-
-    state.players[socket.id] = {
-      ...playerDef,
-      score: 0,
-      ready: false,
-      finished: false,
-      progress: 0,
-    };
-
-    broadcastPlayerList();
-    socket.emit('joinSuccess', { player: state.players[socket.id] });
-
-    // ゲーム中に途中参加した場合、現在状態を送る
-    if (state.status === 'playing' || state.status === 'roundEnd') {
-      socket.emit('latejoin', {
-        round: state.round,
-        maxRounds: MAX_ROUNDS,
-        text: state.currentText,
-        status: state.status,
-        scores: getScoreBoard(),
-      });
-    }
-  });
-
-  // 準備完了トグル
-  socket.on('toggleReady', () => {
-    if (!state.players[socket.id]) return;
-    state.players[socket.id].ready = !state.players[socket.id].ready;
-    broadcastPlayerList();
-    checkAllReady();
-  });
-
-  // タイピング進捗
-  socket.on('progress', ({ chars }) => {
-    if (!state.players[socket.id]) return;
-    state.players[socket.id].progress = chars;
-    io.emit('progressUpdate', {
-      socketId: socket.id,
-      playerId: state.players[socket.id].id,
-      chars,
-    });
-  });
-
-  // ラウンド完了
-  socket.on('complete', ({ accuracy, time }) => {
-    if (!state.players[socket.id]) return;
-    if (state.players[socket.id].finished) return;
-    if (state.status !== 'playing') return;
-
-    state.players[socket.id].finished = true;
-    const rank = state.roundResults.length + 1;
-    state.roundResults.push({
-      socketId: socket.id,
-      playerId: state.players[socket.id].id,
-      name: state.players[socket.id].name,
-      nickname: state.players[socket.id].nickname,
-      color: state.players[socket.id].color,
-      rank,
-      accuracy: Math.round(accuracy),
-      time: Math.round(time),
-    });
-
-    // 全員完了 or タイムアウト後に呼ばれる
-    checkRoundComplete();
-  });
-
-  // 切断
-  socket.on('disconnect', () => {
-    console.log(`切断: ${socket.id}`);
-    if (state.players[socket.id]) {
-      delete state.players[socket.id];
-      broadcastPlayerList();
-    }
-  });
-});
-
-// ─── ゲームロジック ───────────────────────────────────
-
-function checkAllReady() {
-  const players = Object.values(state.players);
-  if (players.length < 1) return;
-  if (players.length > 0 && players.every(p => p.ready) && state.status === 'lobby') {
-    startCountdown();
-  }
-}
-
-function startCountdown() {
-  state.status = 'countdown';
-  let count = 3;
-  io.emit('countdown', { count });
-
-  state.countdownTimer = setInterval(() => {
-    count--;
-    if (count > 0) {
-      io.emit('countdown', { count });
-    } else {
-      clearInterval(state.countdownTimer);
-      startRound();
-    }
-  }, 1000);
-}
-
-function startRound() {
-  state.round++;
-  state.status = 'playing';
-  state.roundResults = [];
-
-  // テキスト選択
-  if (state.textQueue.length === 0) state.textQueue = shuffleTexts();
-  state.currentText = state.textQueue.pop();
-
-  // 全プレイヤーのラウンド状態リセット
-  Object.values(state.players).forEach(p => {
-    p.finished = false;
-    p.progress = 0;
-    p.ready = false;
-  });
-
-  io.emit('roundStart', {
-    round: state.round,
-    maxRounds: MAX_ROUNDS,
-    text: state.currentText,
-  });
-
-  // 60秒タイムアウト
-  state.roundTimer = setTimeout(() => {
-    if (state.status === 'playing') endRound();
-  }, 60000);
-}
-
-function checkRoundComplete() {
-  const players = Object.values(state.players);
-  if (players.length === 0) return;
-  if (players.every(p => p.finished) && state.status === 'playing') {
-    endRound();
-  }
-}
-
-function endRound() {
-  if (state.roundTimer) clearTimeout(state.roundTimer);
-  state.status = 'roundEnd';
-
-  // 未完了のプレイヤーを末尾に追加
-  const finishedIds = state.roundResults.map(r => r.socketId);
-  Object.entries(state.players).forEach(([sid, p]) => {
-    if (!finishedIds.includes(sid)) {
-      state.roundResults.push({
-        socketId: sid,
-        playerId: p.id,
-        name: p.name,
-        nickname: p.nickname,
-        color: p.color,
-        rank: state.roundResults.length + 1,
-        accuracy: 0,
-        time: 60000,
-        dnf: true,
-      });
-    }
-  });
-
-  // スコア加算（1位:4pt 2位:3pt 3位:2pt 4位:1pt）
-  const rankPts = [4, 3, 2, 1];
-  state.roundResults.forEach((r, i) => {
-    if (!r.dnf) {
-      const bonus = Math.round(r.accuracy / 20); // 正確さボーナス（最大5pt）
-      const pts = (rankPts[i] || 0) + bonus;
-      if (state.players[r.socketId]) {
-        state.players[r.socketId].score += pts;
-        r.pointsEarned = pts;
-      }
-    } else {
-      r.pointsEarned = 0;
-    }
-  });
-
-  io.emit('roundEnd', {
-    round: state.round,
-    maxRounds: MAX_ROUNDS,
-    results: state.roundResults,
-    scoreboard: getScoreBoard(),
-  });
-
-  // 最終ラウンド後はゲーム終了
-  setTimeout(() => {
-    if (state.round >= MAX_ROUNDS) {
-      endGame();
-    } else {
-      // 次ラウンド準備
-      state.status = 'lobby';
-      Object.values(state.players).forEach(p => { p.ready = false; });
-      broadcastPlayerList();
-      io.emit('waitNextRound');
-    }
-  }, 5000);
-}
-
-function endGame() {
-  state.status = 'gameEnd';
-  const final = getScoreBoard();
-  io.emit('gameEnd', { scoreboard: final });
-  postToChatwork(final);
-  if (reportEnabled()) report.resultReport(final);
-  setTimeout(resetGame, 30000);
-}
-
-function resetGame() {
-  state = createInitialState();
-  io.emit('gameReset');
-}
-
-function getScoreBoard() {
-  return Object.values(state.players)
-    .sort((a, b) => b.score - a.score)
-    .map((p, i) => ({ ...p, rank: i + 1 }));
-}
-
-function broadcastPlayerList() {
-  io.emit('playerList', {
-    players: Object.entries(state.players).map(([sid, p]) => ({
-      socketId: sid,
-      ...p,
-    })),
-    status: state.status,
-  });
-}
-
-// ─── Chatwork通知 ─────────────────────────────────────
-async function postToChatwork(scoreboard) {
-  const token = process.env.CHATWORK_API_TOKEN;
-  const roomId = process.env.CHATWORK_ROOM_ID;
-
-  if (!token || !roomId) {
-    console.log('[Chatwork] 環境変数未設定のためスキップ');
-    return;
-  }
-
-  const medal = ['🥇', '🥈', '🥉', '4️⃣'];
-  const lines = scoreboard.map((p, i) =>
-    `${medal[i] || '　'} ${p.rank}位　${p.nickname}（${p.name}）　${p.score}pt`
-  );
-
-  const message = [
-    '[info][title]🎹 日本デザイン タイピング大会 結果発表！[/title]',
-    ...lines,
-    '',
-    `おめでとう！ ${scoreboard[0].nickname}（${scoreboard[0].name}）の優勝です！🎉`,
-    '[/info]',
-  ].join('\n');
-
-  try {
-    const res = await fetch(`https://api.chatwork.com/v2/rooms/${roomId}/messages`, {
-      method: 'POST',
-      headers: {
-        'X-ChatWorkToken': token,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: `body=${encodeURIComponent(message)}`,
-    });
-    const json = await res.json();
-    console.log('[Chatwork] 送信完了:', json);
-    io.emit('chatworkSent', { success: true });
-  } catch (e) {
-    console.error('[Chatwork] エラー:', e.message);
-    io.emit('chatworkSent', { success: false });
-  }
-}
-
-// ─── 定時Chatworkレポート（4/21以降） ────────────────
-// 通知開始日: 2026-04-21
+const TEXTS_PER_GAME = 20;
 const REPORT_START = new Date('2026-04-21T00:00:00+09:00');
+const ADMIN_PASSWORD = 'kanazawa';
+
+// 今日の記録
+let dailyRecords = [];
+// 問題キャッシュ
+let questionsCache = [];
 
 function reportEnabled() {
   return new Date() >= REPORT_START;
 }
 
-// 毎朝9:00（JST） 朝の一言レポート
+function pickTexts() {
+  const short = questionsCache.filter(t => !t.long);
+  const long  = questionsCache.filter(t => t.long);
+  const result = [];
+  const seen   = new Set();
+  let attempts = 0;
+  while (result.length < TEXTS_PER_GAME && attempts < 200) {
+    attempts++;
+    const useLong = Math.random() < 0.5 && long.length > 0;
+    const pool = useLong ? long : short;
+    if (pool.length === 0) continue;
+    const t = pool[Math.floor(Math.random() * pool.length)];
+    if (!seen.has(t.input)) { seen.add(t.input); result.push(t); }
+  }
+  return result;
+}
+
+// ── 管理者ミドルウェア ────────────────────────────
+function adminAuth(req, res, next) {
+  const pw = req.headers['x-admin-password'];
+  if (pw !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: '認証失敗' });
+  }
+  next();
+}
+
+// ── 管理者API ─────────────────────────────────────
+app.get('/api/admin/questions', adminAuth, async (req, res) => {
+  try {
+    const questions = await getQuestions();
+    res.json(questions);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/admin/questions', adminAuth, async (req, res) => {
+  try {
+    const { display, romaji, category, long } = req.body;
+    if (!display || !romaji || !category) {
+      return res.status(400).json({ error: 'display, romaji, category は必須です' });
+    }
+    const q = await addQuestion({ display, romaji, category, long: !!long });
+    questionsCache = await getQuestions();
+    res.json(q);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/api/admin/questions/:id', adminAuth, async (req, res) => {
+  try {
+    await deleteQuestion(req.params.id);
+    questionsCache = await getQuestions();
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Socket.IO ─────────────────────────────────────
+io.on('connection', (socket) => {
+  console.log(`接続: ${socket.id}`);
+  socket.emit('leaderboardUpdate', dailyRecords);
+
+  socket.on('startGame', ({ playerId }) => {
+    if (!PLAYERS.find(p => p.id === playerId)) return;
+    socket.emit('gameData', { texts: pickTexts() });
+  });
+
+  socket.on('submitScore', ({ playerId, score, avgWpm, avgAccuracy }) => {
+    const playerDef = PLAYERS.find(p => p.id === playerId);
+    if (!playerDef) return;
+
+    const record = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      playerId,
+      name:        playerDef.name,
+      nickname:    playerDef.nickname,
+      color:       playerDef.color,
+      score:       Math.round(score),
+      avgWpm:      Math.round(avgWpm),
+      avgAccuracy: Math.round(avgAccuracy),
+      timestamp: new Date().toLocaleTimeString('ja-JP', {
+        timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit',
+      }),
+    };
+
+    dailyRecords.push(record);
+    dailyRecords.sort((a, b) => b.score - a.score);
+    io.emit('leaderboardUpdate', dailyRecords);
+    console.log(`[Score] ${record.nickname} ${record.score}pt (${record.avgWpm}WPM / ${record.avgAccuracy}%)`);
+  });
+
+  socket.on('disconnect', () => console.log(`切断: ${socket.id}`));
+});
+
+// 日次リセット（JST 0:00）
+cron.schedule('0 0 * * *', () => {
+  console.log('[Cron] 日次リセット');
+  dailyRecords = [];
+  io.emit('leaderboardUpdate', dailyRecords);
+}, { timezone: 'Asia/Tokyo' });
+
+// 朝の一言（9:00 JST）
 cron.schedule('0 9 * * *', () => {
   if (!reportEnabled()) return;
-  console.log('[Cron] 朝のレポート送信');
+  console.log('[Cron] 朝のレポート');
   report.morningReport();
 }, { timezone: 'Asia/Tokyo' });
 
-// 毎夕18:00（JST） 夜のサマリーレポート
+// 夕方ランキング（18:00 JST）
 cron.schedule('0 18 * * *', () => {
   if (!reportEnabled()) return;
-  console.log('[Cron] 夕方のレポート送信');
-  const todayScores = Object.values(state.players).length > 0
-    ? getScoreBoard()
-    : [];
-  report.eveningReport(todayScores);
+  console.log('[Cron] 夕方レポート');
+  report.eveningReport(dailyRecords);
 }, { timezone: 'Asia/Tokyo' });
 
-// ─── サーバー起動 ─────────────────────────────────────
+// ── 起動 ──────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`\n🎹 日本デザイン タイピングゲーム`);
-  console.log(`   http://localhost:${PORT} で起動中`);
-  console.log(`   Chatworkレポート開始日: 2026-04-21（毎朝9:00・毎夕18:00）\n`);
-});
+
+(async () => {
+  try {
+    await initIfEmpty();
+    questionsCache = await getQuestions();
+    console.log(`[DB] ${questionsCache.length}件の問題を読み込みました`);
+  } catch (e) {
+    console.error('[DB] 接続エラー:', e.message);
+    process.exit(1);
+  }
+
+  server.listen(PORT, () => {
+    console.log(`\n🎹 日本デザイン タイピングゲーム`);
+    console.log(`   http://localhost:${PORT} で起動中\n`);
+  });
+})();

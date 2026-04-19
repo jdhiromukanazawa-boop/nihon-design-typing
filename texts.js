@@ -1,9 +1,10 @@
 // =====================================================
 // 出題テキスト ─ 株式会社日本デザイン版
-// display : 画面上部に表示する日本語テキスト（漢字OK）
-// romaji  : 読み仮名/ローマ字（スペースあり・読み用）
-// input   : タイピングする文字列（romaji からスペース除去、自動生成）
-// long    : true → 低確率（20%）でしか出ない長文
+// display : 画面上部に表示する日本語テキスト
+// romaji  : 読み仮名（スペースあり・表示用）
+// input   : タイプする文字列（romaji からスペース除去、自動生成）
+// long    : true → 50% 確率で出る長文
+// ※ 伸ばし棒「ー」は romaji で「-」と表記→ハイフンキーでタイプ
 // =====================================================
 
 const PLAYERS = [
@@ -25,62 +26,156 @@ function T(display, romaji, category, long = false) {
 
 const TEXTS = [
 
-  // ── 会社名・メンバー ──────────────────────────────
-  T('日本デザイン',             'nihon dezain',                  '会社名'),
-  T('株式会社日本デザイン',     'kabushiki gaisha nihon dezain', '会社名'),
-  T('大坪拓摩',                 'otsubo takuma',                 '代表'),
-  T('阿部（ゆきんこ）',         'yukinko abe',                   '先輩名'),
-  T('箱山（ほたて）',           'hotate hakoyama',               '先輩名'),
-  T('三輪（みわちゃん）',       'miwachan miwa',                 '先輩名'),
-  T('古田（マリメッコ）',       'marimekko furuta',              '先輩名'),
-  T('金澤（ひろむ）',           'hiromu kanazawa',               '先輩名'),
+  // ── 会社名・代表 ──────────────────────────────────
+  T('日本デザイン',         'nihon dezain',                  '会社名'),
+  T('株式会社日本デザイン', 'kabushiki gaisha nihon dezain', '会社名'),
+  T('大坪拓摩',             'otsubo takuma',                 '代表'),
 
   // ── バリュー ──────────────────────────────────────
-  T('Life and Work',            'life and work',                 'バリュー'),
-  T('Be good',                  'be good',                       'バリュー'),
-  T('Human being',              'human being',                   'バリュー'),
-  T('Improve everyday',         'improve everyday',              'バリュー'),
-  T('Effort and Reflect',       'effort and reflect',            'バリュー'),
-  T('Appreciate each',          'appreciate each',               'バリュー'),
-  T('Purposeful',               'purposeful',                    'バリュー'),
-  T('Be sustainable',           'be sustainable',                'バリュー'),
+  T('Life and Work',    'life and work',     'バリュー'),
+  T('Be good',          'be good',           'バリュー'),
+  T('Human being',      'human being',       'バリュー'),
+  T('Improve everyday', 'improve everyday',  'バリュー'),
+  T('Effort and Reflect','effort and reflect','バリュー'),
+  T('Appreciate each',  'appreciate each',   'バリュー'),
+  T('Purposeful',       'purposeful',        'バリュー'),
+  T('Be sustainable',   'be sustainable',    'バリュー'),
 
   // ── 社長の名言（短め）────────────────────────────
-  T('アホやね',                         'aho ya ne',                              '社長の名言'),
-  T('もう一回とかない',                 'mou ikkai toka nai',                     '社長の名言'),
-  T('量より質よりスピード',             'ryo yori shitsu yori supiido',           '社長の名言'),
-  T('選ぶ権利はまだない',               'erabu kenri wa mada nai',               '社長の名言'),
-  T('大変って大きく変わる',             'taihen tte okiku kawaru',               '社長の名言'),
-  T('気付いても大抵やらない',           'kidzuite mo taitei yaranai',            '社長の名言'),
-  T('先輩の現在は後輩の将来',           'senpai no genzai wa kohai no shorai',   '社長の名言'),
-  T('結果出してから言わないとダサい',   'kekka dashite kara iwa naito dasai',    '社長の名言'),
-  T('疲れた凡人ならとっくに倒れてる',   'tsukareta bonjin nara taoreteru',       '社長の名言'),
-  T('変人と言われないと世の中変えれない', 'henjin to iwarenai to yononaka kaerenai', '社長の名言'),
-  T('生きる力は働く力から',             'ikiru chikara wa hataraku chikara kara', '社長の名言'),
+  T('アホやね',                         'aho ya ne',                               '社長の名言'),
+  T('順調？',                           'junchou',                                 '社長の名言'),
+  T('もう一回とかない',                 'mou ikkai toka nai',                      '社長の名言'),
+  T('量より質よりスピード',             'ryou yori shitsu yori supi-do',           '社長の名言'),
+  T('選ぶ権利はまだない',               'erabu kenri wa mada nai',                 '社長の名言'),
+  T('大変って大きく変わる',             'taihen tte okiku kawaru',                 '社長の名言'),
+  T('気付いても大抵やらない',           'kizuite mo taitei yaranai',               '社長の名言'),
+  T('先輩の現在は後輩の将来',           'senpai no genzai wa kohai no shourai',    '社長の名言'),
+  T('結果出してから言わないとダサい',   'kekka dashite kara iwa naito dasai',      '社長の名言'),
+  T('疲れた凡人ならとっくに倒れてる',   'tsukareta bonjin nara tokkuni taoreteru', '社長の名言'),
+  T('変人と言われないと世の中変えれない','henjin to iwarenai to yononaka kaerenai','社長の名言'),
+  T('生きる力は働く力から',             'ikiru chikara wa hataraku chikara kara',  '社長の名言'),
+  T('親はたいてい害でしかない',         'oya wa taitei gai de shika nai',          '社長の名言'),
+  T('簡単な算数なのよ',                 'kantan na sansuu na no yo',               '社長の名言'),
+  T('クズほどよく食べる',               'kuzu hodo yoku taberu',                   '社長の名言'),
+  T('日頃の積み重ね',                   'higoro no tsumikasane',                   '社長の名言'),
+  T('普通しないよね',                   'futsuu shi nai yo ne',                    '社長の名言'),
+  T('みんな不思議だよね',               'minna fushigi da yo ne',                  '社長の名言'),
+  T('難しいこと言ってない',             'muzukashii koto itte nai',                '社長の名言'),
+  T('呑気だよねみんなほんと',           'nonki da yo ne minna honto',              '社長の名言'),
+  T('本気じゃないって見ればわかる',     'honki ja nai tte mireba wakaru',          '社長の名言'),
+  T('言ったこと守れない人が多い',       'itta koto mamorenai hito ga ooi',         '社長の名言'),
+  T('読んでないんだろうね',             'yonde nai n darou ne',                    '社長の名言'),
+  T('楽な方にみんな行く',               'raku na hou ni minna iku',                '社長の名言'),
+  T('生きる強さは働く能力に依存する',   'ikiru tsuyosa wa hataraku noryoku ni izon suru', '社長の名言'),
+  T('誰もが誰かのギブを受けている',     'dare mo ga dare ka no gibu wo ukete iru',  '社長の名言'),
+  T('そのギブを自分で止めないこと',     'sono gibu wo jibun de tome nai koto',      '社長の名言'),
+  T('強いやつは正しい',                 'tsuyoi yatsu wa tadashii',                 '社長の名言'),
+  T('優しい奴が偉い',                   'yasashii yatsu ga erai',                   '社長の名言'),
+  T('情熱と冷静の間にベストがある',     'jounetsu to reisei no aida ni besuto ga aru', '社長の名言'),
+  T('従わせるのではなく従われる',       'shitagawaseru no de wa naku shitagawareru','社長の名言'),
+  T('心が強い奴に心を任せる',           'kokoro ga tsuyoi yatsu ni kokoro wo makaseru', '社長の名言'),
 
-  // ── みわ→ひろむ（短め）───────────────────────────
-  T('ひろむさんみたいな人になりたい',       'hiromunasan mitai ni naritai',           'みわ→ひろむ'),
-  T('こんないい人っているんだ',             'konna ii hito tte iru nda',              'みわ→ひろむ'),
-  T('一緒に成長していこう',                 'issho ni seichou shite ikou',            'みわ→ひろむ'),
-  T('前向きになる話し方',                   'maemuki ni naru hanashikata',            'みわ→ひろむ'),
-  T('ひろむさんが横にいると頑張ろうと思う', 'hiromunasan ga yoko ni iru to ganbarou', 'みわ→ひろむ'),
-
-  // ── 長文（long: true → たまにしか出ない）────────
+  // ── 長文（long: true）────────────────────────────
   T('日本人の生き方・働き方をより幸せにする',
     'nihon jin no ikikata hatarakikata wo yori shiawase ni suru',
     'ミッション', true),
+
   T('誰もが生きたいと思う世界 誰もが行きたいと思う未来',
     'dare mo ga ikitai to omou sekai dare mo ga ikitai to omou mirai',
     'ビジョン', true),
-  T('ひろむさんはいつも私の気持ちが前向きになるような話し方をしてくれる',
-    'hiromunasan wa itsumo kimochi ga maemuki ni naru you na hanashikata wo shite kureru',
-    'みわ→ひろむ', true),
-  T('ひろむさんが社長になるために私も成長していきたい',
-    'hiromunasan ga shacho ni naru tame ni watashi mo seichou shite ikitai',
-    'みわ→ひろむ', true),
+
   T('働く能力なしに生きる能力なし 生きる力は働く力から生まれる',
-    'hataraku noryoku nashi ni ikiru noryoku nashi ikiru chikara wa hataraku chikara kara',
+    'hataraku noryoku nashi ni ikiru noryoku nashi ikiru chikara wa hataraku chikara kara umareru',
     '社長の名言', true),
+
+  T('底辺から俺も始まったからね みんなができないはずがない',
+    'teihen kara ore mo hajimatta kara ne minna ga dekinai hazu ga nai',
+    '社長の名言', true),
+
+  T('知識だけ取り入れて満足しちゃうからね',
+    'chishiki dake toriirete manzoku shichau kara ne',
+    '社長の名言', true),
+
+  T('寝ないで文化祭のステージ作ってたからね',
+    'nenaide bunkasai no sute-ji tsukutteta kara ne',
+    '社長の名言', true),
+
+  T('歯磨きは歯にいいっていうエビデンスひとつもないからね',
+    'hamigaki wa ha ni ii tte iu ebidensu hitotsu mo nai kara ne',
+    '社長の名言', true),
+
+  T('やりたいとか冗談でも面白くないよね',
+    'yaritai toka joudan demo omoshirokunai yo ne',
+    '社長の名言', true),
+
+  T('論文とか社会人になってから書かないよね',
+    'ronbun toka shakaijin ni natte kara kakanai yo ne',
+    '社長の名言', true),
+
+  T('本気じゃないって見ればわかるよね 結果出してから言えよ',
+    'honki ja nai tte mireba wakaru yo ne kekka dashite kara ie yo',
+    '社長の名言', true),
+
+  T('どこまでいきたいかっていう話だよね',
+    'doko made ikitai ka tte iu hanashi da yo ne',
+    '社長の名言', true),
+
+  T('自分の顔面殴りまくったよね その時は',
+    'jibun no ganmen naguri makutta yo ne sono toki wa',
+    '社長の名言', true),
+
+  T('子供に選ばれる会社ではなく、大人に選ばれる会社',
+    'kodomo ni erabareru kaisha de wa naku otona ni erabareru kaisha',
+    '社長の名言', true),
+
+  T('ストレスを感じたとき、ストレスを減らそうと思ってはならない',
+    'sutoresu wo kanjita toki sutoresu wo heraso to omotte wa naranai',
+    '社長の名言', true),
+
+  T('このギブを貰ったままだとテイカーになってしまう',
+    'kono gibu wo moratta mama dato teika- ni natte shimau',
+    '社長の名言', true),
+
+  T('どうしたらできるかを考えるのが大人',
+    'dou shitara dekiru ka wo kangaeru no ga otona',
+    '社長の名言', true),
+
+  T('高め合うパートナーでない限り、そのパートナーは必ずあなたの足を引っ張る',
+    'takame au pa-tona- de nai kagiri sono pa-tona- wa kanarazu anata no ashi wo hipparu',
+    '社長の名言', true),
+
+  // ── みわちゃんからひろむさんへ ──────────────────
+  T('ひろむさんが一緒に成長していこうって言ってくださったこと、とても嬉しかったです',
+    'hiromu san ga issho ni seichou shite ikou tte itte kudasatta koto totemo ureshikatta desu',
+    'みわからひろむへ', true),
+
+  T('でもひろむさんみたいな人になりたいので頑張ります',
+    'demo hiromu san mitaina hito ni naritai no de ganbarimasu',
+    'みわからひろむへ', true),
+
+  T('ひろむさんが元気にいると仕事とかそれ以外のことも全部頑張ろうって思う',
+    'hiromu san ga genki ni iru to shigoto toka sore igai no koto mo zenbu ganbarou tte omou',
+    'みわからひろむへ', true),
+
+  T('ひろむさんと話して自分の気持ちが前向きに変わって、取り組むことができる',
+    'hiromu san to hanashite jibun no kimochi ga maemuki ni kawatte torikumu koto ga dekiru',
+    'みわからひろむへ', true),
+
+  T('いつもひろむさんの気持ちが前向きになるような話し方、接し方をしてくれる',
+    'itsumo hiromu san no kimochi ga maemuki ni naru you na hanashikata sesshikata wo shite kureru',
+    'みわからひろむへ', true),
+
+  T('ひろむさんと話したかっこいい人になれるようがんばります',
+    'hiromu san to hanashita kakkoi hito ni nareru you ganbarimasu',
+    'みわからひろむへ', true),
+
+  T('ひろむさんに何かをあげれるような人になりたいです',
+    'hiromu san ni nanika wo agereru you na hito ni naritai desu',
+    'みわからひろむへ', true),
+
+  T('こんな良い人っているんだって思う',
+    'konna ii hito tte iru n da tte omou',
+    'みわからひろむへ', true),
 ];
 
 module.exports = { PLAYERS, TEXTS };

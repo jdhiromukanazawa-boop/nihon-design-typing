@@ -8,225 +8,272 @@ const PLAYER_DEFS = [
   { id: 'furuta',   name: '古田',   nickname: 'マリメッコ', color: '#FFB703', avatar: '/avatars/furuta.jpg'   },
 ];
 
-const RANK_ICONS = ['🥇','🥈','🥉','4️⃣'];
-const MEMORY_PHOTOS = ['/avatars/memory1.jpg', '/avatars/memory2.jpg'];
+const RANK_ICONS = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
 
 // ── 状態 ──────────────────────────────────────────────
 let socket;
-let mySocketId  = null;
-let myPlayer    = null;
-let currentText = null;
-let totalChars  = 0;
-let startTime   = 0;
-let finished    = false;
-let timerInterval = null;
-let timeLeft    = 60;
-let lastTyped   = '';
+let myPlayer     = null;
+let gameTexts    = [];
+let currentIndex = 0;
+let textResults  = [];
+let currentText  = null;
+let inputDone    = false;
+let timerHandle  = null;
+let timeLeft     = 60;
+let startTime    = 0;
+let leaderboard  = [];
 
 // ── 起動 ──────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   buildLobby();
-  socket = io();
-  setupSocket();
+  setupSoundToggle();
+  setupSpaceStart();
+  setupGameScreenFocus();
+  connectSocket();
   preloadImages();
 });
 
-function preloadImages() {
-  [...PLAYER_DEFS.map(p => p.avatar), ...MEMORY_PHOTOS].forEach(src => {
-    const img = new Image(); img.src = src;
+// ゲーム画面をクリックしたら入力欄にフォーカス（ブラウザが自動フォーカスを
+// ブロックした場合でもタイピングできるように）
+function setupGameScreenFocus() {
+  document.getElementById('screen-game').addEventListener('click', () => {
+    const input = document.getElementById('typingInput');
+    if (!input.disabled) input.focus();
   });
 }
 
-// ── ロビー構築 ────────────────────────────────────────
+function preloadImages() {
+  PLAYER_DEFS.forEach(p => { const i = new Image(); i.src = p.avatar; });
+}
+
+// ── Socket ────────────────────────────────────────────
+function connectSocket() {
+  socket = io();
+  socket.on('leaderboardUpdate', records => {
+    leaderboard = records;
+    renderLeaderboard('lobbyLeaderboard', records);
+    renderLeaderboard('resultLeaderboard', records);
+  });
+  socket.on('gameData', ({ texts }) => beginGame(texts));
+}
+
+// ── ロビー ────────────────────────────────────────────
 function buildLobby() {
   const grid = document.getElementById('playerGrid');
+  grid.innerHTML = '';
   PLAYER_DEFS.forEach(p => {
     const card = document.createElement('div');
     card.className = 'player-card';
     card.id = `card-${p.id}`;
     card.innerHTML = `
-      <span class="ready-pip">READY</span>
       <img class="avatar-img" src="${p.avatar}" alt="${p.name}" onerror="this.src='/avatars/fallback.png'">
       <div class="p-name">${p.name}</div>
       <div class="p-nick">${p.nickname}</div>
-      <div class="card-actions">
-        <button class="btn btn-success" id="readyBtn-${p.id}" onclick="toggleReady('${p.id}')">準備OK</button>
-        <button class="btn btn-ghost"   onclick="leaveGame('${p.id}')">離席</button>
-      </div>
     `;
-    card.addEventListener('click', e => {
-      if (e.target.closest('.card-actions')) return;
-      joinPlayer(p.id);
-    });
+    card.addEventListener('click', () => selectPlayer(p.id));
     grid.appendChild(card);
+  });
+
+  document.getElementById('startBtn').addEventListener('click', requestStart);
+}
+
+function selectPlayer(id) {
+  if (myPlayer) {
+    document.getElementById(`card-${myPlayer.id}`).classList.remove('mine');
+  }
+  myPlayer = PLAYER_DEFS.find(p => p.id === id);
+  document.getElementById(`card-${id}`).classList.add('mine');
+  const btn = document.getElementById('startBtn');
+  btn.disabled = false;
+  document.getElementById('startHint').style.display = 'block';
+}
+
+function setupSpaceStart() {
+  document.addEventListener('keydown', e => {
+    if (e.code !== 'Space') return;
+    if (!document.getElementById('screen-lobby').classList.contains('active')) return;
+    e.preventDefault();
+    if (myPlayer) requestStart();
   });
 }
 
-// ── Socket ────────────────────────────────────────────
-function setupSocket() {
-  socket.on('connect', () => { mySocketId = socket.id; });
+function requestStart() {
+  if (!myPlayer) return;
+  ensureAudio();
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('startHint').style.display = 'none';
+  socket.emit('startGame', { playerId: myPlayer.id });
+}
 
-  socket.on('joinSuccess', ({ player }) => {
-    myPlayer = PLAYER_DEFS.find(p => p.id === player.id);
-    const card = document.getElementById(`card-${player.id}`);
-    if (card) card.classList.add('mine');
-  });
-
-  socket.on('joinError', msg => showModal(msg));
-
-  socket.on('playerList', ({ players, status }) => updateLobbyUI(players, status));
-
-  socket.on('countdown', ({ count }) => {
-    showScreen('countdown');
-    const el = document.getElementById('cdNum');
-    el.textContent = count;
+// ── カウントダウン ────────────────────────────────────
+function runCountdown(cb) {
+  showScreen('countdown');
+  let n = 3;
+  const el = document.getElementById('cdNum');
+  const tick = () => {
+    el.textContent = n > 0 ? n : 'GO!';
     el.style.animation = 'none';
     void el.offsetWidth;
     el.style.animation = '';
-  });
+    if (n === 0) { setTimeout(cb, 600); return; }
+    n--;
+    setTimeout(tick, 1000);
+  };
+  tick();
+}
 
-  socket.on('roundStart', ({ round, maxRounds, text }) => startRound(round, maxRounds, text));
-
-  socket.on('progressUpdate', ({ playerId, chars }) => {
-    const pct = totalChars ? Math.round(chars / totalChars * 100) : 0;
-    setProgressUI(playerId, pct, chars >= totalChars);
-  });
-
-  socket.on('roundEnd', ({ round, maxRounds, results, scoreboard }) => {
-    stopTimer();
-    showRoundEnd(round, maxRounds, results, scoreboard);
-  });
-
-  socket.on('waitNextRound', () => {
-    showScreen('lobby');
-    myPlayer && setReadyState(myPlayer.id, false);
-  });
-
-  socket.on('gameEnd', ({ scoreboard }) => showGameOver(scoreboard));
-  socket.on('chatworkSent', ({ success }) => {
-    document.getElementById('chatworkMsg').textContent =
-      success ? '✅ Chatworkに結果を投稿しました！' : '⚠️ Chatwork通知の送信に失敗しました';
-  });
-  socket.on('gameReset', () => { myPlayer = null; location.reload(); });
-  socket.on('latejoin', ({ round, maxRounds, text, status, scores }) => {
-    if (status === 'playing') startRound(round, maxRounds, text);
-    renderScoreboard(scores);
+// ── ゲーム開始 ────────────────────────────────────────
+function beginGame(texts) {
+  gameTexts    = texts;
+  currentIndex = 0;
+  textResults  = [];
+  runCountdown(() => {
+    startBGM();
+    showText(0);
   });
 }
 
-// ── ロビー操作 ────────────────────────────────────────
-function joinPlayer(id) {
-  const card = document.getElementById(`card-${id}`);
-  if (card.classList.contains('taken')) return;
-  if (myPlayer) return;
-  socket.emit('join', { playerId: id });
-}
-
-function toggleReady(id) {
-  if (!myPlayer || myPlayer.id !== id) return;
-  socket.emit('toggleReady');
-}
-
-function leaveGame(id) {
-  if (!myPlayer || myPlayer.id !== id) return;
-  socket.disconnect();
-  location.reload();
-}
-
-// ── ロビーUI ──────────────────────────────────────────
-function updateLobbyUI(players, status) {
-  PLAYER_DEFS.forEach(p => {
-    const card = document.getElementById(`card-${p.id}`);
-    card.classList.remove('taken','mine','ready-state');
-  });
-
-  const area = document.getElementById('joinedArea');
-  area.innerHTML = '';
-
-  if (!players.length) {
-    area.innerHTML = '<p class="empty-hint">カードをクリックして参加してください</p>';
-    return;
-  }
-
-  players.forEach(pl => {
-    const def = PLAYER_DEFS.find(d => d.id === pl.id);
-    const card = document.getElementById(`card-${pl.id}`);
-    card.classList.add('taken');
-    if (pl.socketId === mySocketId) {
-      card.classList.add('mine');
-      setReadyState(pl.id, pl.ready);
-    }
-    if (pl.ready) card.classList.add('ready-state');
-
-    const chip = document.createElement('div');
-    chip.className = 'joined-chip';
-    chip.innerHTML = `
-      <img class="chip-avatar" src="${def.avatar}" alt="${def.name}">
-      <span>${pl.nickname}</span>
-      ${pl.ready ? '<span class="chip-ready">✅</span>' : ''}
-    `;
-    area.appendChild(chip);
-  });
-}
-
-function setReadyState(id, ready) {
-  const btn = document.getElementById(`readyBtn-${id}`);
-  if (!btn) return;
-  btn.textContent = ready ? '準備中…' : '準備OK';
-  btn.style.opacity = ready ? '.6' : '1';
-}
-
-// ── ラウンド開始 ──────────────────────────────────────
-function startRound(round, maxRounds, text) {
-  currentText = text;
-  totalChars  = text.input.length;
-  finished    = false;
-  lastTyped   = '';
+// ── テキスト表示 ──────────────────────────────────────
+function showText(idx) {
+  currentText = gameTexts[idx];
+  inputDone   = false;
+  timeLeft    = currentText.long ? 60 : 30;
   startTime   = Date.now();
-  timeLeft    = 60;
 
-  document.getElementById('roundNum').textContent    = round;
-  document.getElementById('maxRound').textContent    = maxRounds;
-  document.getElementById('catPill').textContent     = text.category;
-  document.getElementById('displayText').textContent = text.display;
-  document.getElementById('displayRomaji').textContent = text.romaji || text.input;
+  document.getElementById('roundNum').textContent      = idx + 1;
+  document.getElementById('maxRound').textContent      = gameTexts.length;
+  document.getElementById('catPill').textContent       = currentText.category;
+  document.getElementById('displayText').textContent   = currentText.display;
+  document.getElementById('displayRomaji').textContent = currentText.romaji || currentText.input;
   document.getElementById('accuracyLabel').textContent = '正確率 —';
   document.getElementById('wpmLabel').textContent      = '— WPM';
+  document.getElementById('textResultFlash').style.display = 'none';
 
   const input = document.getElementById('typingInput');
-  input.value = '';
+  input.value    = '';
   input.disabled = false;
   input.focus();
-
-  // スペースキーを封鎖
+  requestAnimationFrame(() => input.focus()); // カウントダウン後のフォーカスブロック対策
   input.onkeydown = e => { if (e.key === ' ') e.preventDefault(); };
+  input.oninput   = onInput;
 
   renderCharPreview('');
-  buildProgressBars();
-  buildAvatarProgress();
-  renderScoreboard([]);
+  buildProgressDots(idx, gameTexts.length);
   startTimer();
   showScreen('game');
+}
 
-  input.addEventListener('input', onInput);
+// ── 柔軟ローマ字マッチング ────────────────────────────
+
+function romajiCandidates(exp, pos) {
+  const e3 = exp.slice(pos, pos + 3);
+  const e2 = exp.slice(pos, pos + 2);
+  const e1 = exp[pos];
+
+  // 3文字パターン（長い方から先にチェック）
+  const map3 = { chi:['chi','ti'], shi:['shi','si'], tsu:['tsu','tu'],
+                 sha:['sha','sya'], shi:['shi','si'], shu:['shu','syu'], sho:['sho','syo'],
+                 cha:['cha','tya'], chu:['chu','tyu'], cho:['cho','tyo'],
+                 dzu:['dzu','du'] };
+  if (map3[e3]) return map3[e3].map(t => [3, t]);
+
+  // 2文字パターン
+  const map2 = { fu:['fu','hu'], ji:['ji','zi'] };
+  if (map2[e2]) return map2[e2].map(t => [2, t]);
+
+  // 「ん」(n) の処理
+  if (e1 === 'n') {
+    const next = exp[pos + 1];
+    // 次が子音（母音・n・y以外）か末尾 → n でも nn でも OK
+    if (!next || !'aiueoyn'.includes(next)) {
+      return [[1, 'n'], [1, 'nn']];
+    }
+    return [[1, 'n']];
+  }
+
+  return e1 ? [[1, e1]] : [];
+}
+
+function matchRomaji(expected, typed) {
+  let ePos = 0, tPos = 0;
+  while (ePos < expected.length && tPos < typed.length) {
+    const cands = romajiCandidates(expected, ePos);
+    let matched = false;
+    for (const [eFwd, tSeq] of cands) {
+      if (typed.slice(tPos).startsWith(tSeq)) {
+        ePos += eFwd; tPos += tSeq.length;
+        matched = true; break;
+      }
+    }
+    if (!matched) return { ePos, tPos, error: true, done: false };
+  }
+  return { ePos, tPos, error: false, done: ePos >= expected.length };
+}
+
+// ── 入力処理 ──────────────────────────────────────────
+function onInput(e) {
+  if (inputDone) return;
+  const typed    = e.target.value;
+  const expected = currentText.input;
+
+  playTypingSound();
+
+  const { ePos, tPos, error, done } = matchRomaji(expected, typed);
+
+  renderCharPreview(ePos, error);
+
+  const elapsed = (Date.now() - startTime) / 60000;
+  const wpm = elapsed > 0 ? Math.round((ePos / 5) / elapsed) : 0;
+  const acc = typed.length > 0 ? Math.min(100, Math.round(ePos / typed.length * 100)) : 100;
+  document.getElementById('accuracyLabel').textContent = `正確率 ${acc}%`;
+  document.getElementById('wpmLabel').textContent      = `${wpm} WPM`;
+
+  if (done) {
+    const t    = Date.now() - startTime;
+    const fwpm = Math.round((expected.length / 5) / (t / 60000));
+    completeText(fwpm, 100, true);
+  }
+}
+
+// ── テキスト完了 ──────────────────────────────────────
+function completeText(wpm, acc, completed) {
+  inputDone = true;
+  stopTimer();
+  const input = document.getElementById('typingInput');
+  input.disabled = true;
+  input.oninput  = null;
+
+  textResults.push({ wpm, acc, completed });
+
+  const flash = document.getElementById('textResultFlash');
+  flash.textContent = completed ? `✓ ${wpm} WPM` : '⏰ タイムオーバー';
+  flash.className   = `text-result-flash ${completed ? 'flash-ok' : 'flash-timeout'}`;
+  flash.style.display = 'block';
+
+  setTimeout(() => {
+    flash.style.display = 'none';
+    if (currentIndex + 1 < gameTexts.length) {
+      currentIndex++;
+      showText(currentIndex);
+    } else {
+      finishGame();
+    }
+  }, 1300);
 }
 
 // ── タイマー ──────────────────────────────────────────
 function startTimer() {
   stopTimer();
-  updateTimerDisplay(60);
-  timerInterval = setInterval(() => {
+  updateTimerDisplay(timeLeft);
+  timerHandle = setInterval(() => {
     timeLeft--;
     updateTimerDisplay(timeLeft);
-    if (timeLeft <= 0) {
-      stopTimer();
-      if (!finished) forceComplete();
-    }
+    if (timeLeft <= 0) { stopTimer(); completeText(0, 0, false); }
   }, 1000);
 }
 
 function stopTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  if (timerHandle) { clearInterval(timerHandle); timerHandle = null; }
 }
 
 function updateTimerDisplay(sec) {
@@ -235,61 +282,70 @@ function updateTimerDisplay(sec) {
   el.classList.toggle('danger', sec <= 10);
 }
 
-function forceComplete() {
-  finished = true;
-  const input = document.getElementById('typingInput');
-  input.disabled = true;
-  input.removeEventListener('input', onInput);
-  socket.emit('complete', { accuracy: 0, time: 60000, wpm: 0 });
+// ── ゲーム終了 ────────────────────────────────────────
+function finishGame() {
+  stopBGM();
+  const done   = textResults.filter(r => r.completed);
+  const total  = textResults.length;
+  const avgWpm = done.length > 0 ? Math.round(done.reduce((s, r) => s + r.wpm, 0) / done.length) : 0;
+  const avgAcc = done.length > 0 ? Math.round(done.reduce((s, r) => s + r.acc, 0) / done.length) : 0;
+  const score  = done.reduce((s, r) => s + Math.floor(r.wpm * (r.acc / 100)), 0);
+
+  socket.emit('submitScore', { playerId: myPlayer.id, score, avgWpm, avgAccuracy: avgAcc });
+  showResult(score, avgWpm, avgAcc);
 }
 
-// ── 入力処理 ──────────────────────────────────────────
-function onInput(e) {
-  if (finished) return;
-  const typed    = e.target.value;
-  const expected = currentText.input;
+// ── 結果画面 ──────────────────────────────────────────
+function showResult(score, avgWpm, avgAcc) {
+  document.getElementById('resultAvatar').src         = myPlayer.avatar;
+  document.getElementById('resultNickname').textContent = myPlayer.nickname;
+  document.getElementById('resultScore').textContent  = score;
+  document.getElementById('resultWpm').textContent    = avgWpm;
+  document.getElementById('resultAccuracy').textContent = `${avgAcc}%`;
 
-  let correct = 0;
-  for (let i = 0; i < typed.length && i < expected.length; i++) {
-    if (typed[i] === expected[i]) correct++; else break;
-  }
+  renderLeaderboard('resultLeaderboard', leaderboard);
+  spawnConfetti();
+  showScreen('result');
 
-  lastTyped = typed;
-  renderCharPreview(typed);
-
-  // WPM・正確率
-  const elapsed = (Date.now() - startTime) / 60000;
-  const wpm     = elapsed > 0 ? Math.round((correct / 5) / elapsed) : 0;
-  const acc     = typed.length > 0 ? Math.round(correct / typed.length * 100) : 100;
-  document.getElementById('accuracyLabel').textContent = `正確率 ${acc}%`;
-  document.getElementById('wpmLabel').textContent      = `${wpm} WPM`;
-
-  socket.emit('progress', { chars: correct });
-  updateMyProgress(correct);
-
-  // 完了チェック
-  if (typed === expected) {
-    finished = true;
-    stopTimer();
-    input.disabled = true;
-    input.removeEventListener('input', onInput);
-    const time = Date.now() - startTime;
-    socket.emit('complete', { accuracy: 100, time, wpm });
-  }
+  document.getElementById('replayBtn').onclick = () => {
+    document.getElementById('startBtn').disabled = false;
+    document.getElementById('startHint').style.display = 'block';
+    showScreen('lobby');
+  };
 }
 
-// ── char preview (寿司打スタイル) ─────────────────────
-function renderCharPreview(typed) {
+// ── リーダーボード ────────────────────────────────────
+function renderLeaderboard(containerId, records) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!records || !records.length) {
+    el.innerHTML = '<div class="lb-empty">まだ記録がありません</div>';
+    return;
+  }
+  el.innerHTML = records.map((r, i) => `
+    <div class="lb-row${myPlayer && r.playerId === myPlayer.id ? ' lb-mine' : ''}">
+      <span class="lb-rank">${RANK_ICONS[i] || i + 1}</span>
+      <span class="lb-name" style="color:${r.color}">${r.nickname}</span>
+      <span class="lb-score">${r.score}</span>
+      <span class="lb-wpm">${r.avgWpm}</span>
+      <span class="lb-acc">${r.avgAccuracy}%</span>
+      <span class="lb-time">${r.timestamp}</span>
+    </div>
+  `).join('');
+}
+
+// ── charプレビュー ────────────────────────────────────
+function renderCharPreview(ePos, hasError) {
   const expected = currentText.input;
   let html = '';
   for (let i = 0; i < expected.length; i++) {
-    const ch = esc(expected[i]);
-    if (i < typed.length) {
-      html += typed[i] === expected[i]
-        ? `<span class="ch-ok">${ch}</span>`
-        : `<span class="ch-err">${ch}</span>`;
-    } else if (i === typed.length) {
-      html += `<span class="ch-cursor">${ch}</span>`;
+    const ch = escHtml(expected[i]);
+    if (i < ePos) {
+      html += `<span class="ch-ok">${ch}</span>`;
+    } else if (i === ePos) {
+      html += hasError
+        ? `<span class="ch-err">${ch}</span>`
+        : `<span class="ch-cursor">${ch}</span>`;
     } else {
       html += `<span class="ch-rest">${ch}</span>`;
     }
@@ -297,212 +353,27 @@ function renderCharPreview(typed) {
   document.getElementById('charPreview').innerHTML = html;
 }
 
-function esc(s) {
-  return s === ' ' ? '&nbsp;' : s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function escHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// ── 進捗UI ────────────────────────────────────────────
-function buildProgressBars() {
-  const container = document.getElementById('progressAll');
-  container.innerHTML = '';
-  PLAYER_DEFS.forEach(p => {
-    const row = document.createElement('div');
-    row.className = 'prog-row';
-    row.id = `prog-${p.id}`;
-    row.innerHTML = `
-      <img class="prog-avatar" src="${p.avatar}" alt="${p.nickname}">
-      <div class="prog-track"><div class="prog-fill" id="pfill-${p.id}" style="background:${p.color}"></div></div>
-      <div class="prog-pct" id="ppct-${p.id}">0%</div>
-    `;
-    container.appendChild(row);
-  });
+// ── 進捗ドット ────────────────────────────────────────
+function buildProgressDots(current, total) {
+  const container = document.getElementById('progressDots');
+  container.innerHTML = Array.from({ length: total }, (_, i) => {
+    let cls = 'pdot';
+    if (i < current)  cls += ' pdot-done';
+    if (i === current) cls += ' pdot-active';
+    return `<div class="${cls}"></div>`;
+  }).join('');
 }
 
-function buildAvatarProgress() {
-  const container = document.getElementById('avatarProgress');
-  container.innerHTML = '';
-  PLAYER_DEFS.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'avatar-prog-item';
-    item.id = `apitem-${p.id}`;
-    item.innerHTML = `
-      <img class="ap-avatar" src="${p.avatar}" alt="${p.nickname}" id="apavatar-${p.id}">
-      <div class="ap-nick" style="color:${p.color}">${p.nickname}</div>
-      <div class="ap-bar-track"><div class="ap-bar-fill" id="apfill-${p.id}" style="background:${p.color}"></div></div>
-      <div class="ap-pct" id="appct-${p.id}">0%</div>
-    `;
-    container.appendChild(item);
-  });
-}
-
-function updateMyProgress(chars) {
-  if (!myPlayer) return;
-  const pct = totalChars ? Math.round(chars / totalChars * 100) : 0;
-  setProgressUI(myPlayer.id, pct, chars >= totalChars);
-}
-
-function setProgressUI(playerId, pct, done) {
-  const fill  = document.getElementById(`pfill-${playerId}`);
-  const ppct  = document.getElementById(`ppct-${playerId}`);
-  const afill = document.getElementById(`apfill-${playerId}`);
-  const apct  = document.getElementById(`appct-${playerId}`);
-  const apitem= document.getElementById(`apitem-${playerId}`);
-  const row   = document.getElementById(`prog-${playerId}`);
-
-  if (fill)  fill.style.width  = pct + '%';
-  if (ppct)  ppct.textContent  = pct + '%';
-  if (afill) afill.style.width = pct + '%';
-  if (apct)  apct.textContent  = pct + '%';
-  if (done) {
-    apitem && apitem.classList.add('done');
-    row    && row.classList.add('prog-done');
-  }
-}
-
-// ── スコアボード ──────────────────────────────────────
-function renderScoreboard(players) {
-  const sorted = [...players].sort((a,b) => b.score - a.score);
-  const list   = document.getElementById('scoreList');
-  if (!list) return;
-  list.innerHTML = '';
-  sorted.forEach((p, i) => {
-    const def = PLAYER_DEFS.find(d => d.id === p.id) || p;
-    const item = document.createElement('div');
-    item.className = 'score-item';
-    item.innerHTML = `
-      <div class="score-rank">${RANK_ICONS[i]||i+1}</div>
-      <img class="score-avatar" src="${def.avatar}" alt="${p.nickname}">
-      <div class="score-info">
-        <div class="score-nick">${p.nickname}</div>
-        <div class="score-pts"><span>${p.score}</span>pt</div>
-      </div>
-    `;
-    list.appendChild(item);
-  });
-}
-
-// ── ラウンド結果 ──────────────────────────────────────
-function showRoundEnd(round, maxRounds, results, scoreboard) {
-  document.getElementById('resultRound').textContent = round;
-
-  // podium top3
-  const podium = document.getElementById('resultPodium');
-  podium.innerHTML = '';
-  const top3 = results.slice(0,3);
-  // 2位→1位→3位の順で並べる (display order)
-  const displayOrder = top3.length >= 2 ? [top3[1], top3[0], top3[2]].filter(Boolean) : top3;
-  displayOrder.forEach((r, di) => {
-    const realRank = results.indexOf(r) + 1;
-    const def = PLAYER_DEFS.find(d => d.id === r.playerId) || r;
-    const item = document.createElement('div');
-    item.className = `podium-item rank-${realRank}`;
-    item.innerHTML = `
-      <div class="podium-icon">${RANK_ICONS[realRank-1]||''}</div>
-      <img class="podium-avatar" src="${def.avatar}" alt="${r.nickname}">
-      <div class="podium-nick" style="color:${def.color}">${r.nickname}</div>
-      <div class="podium-pts">+${r.pointsEarned??0}pt</div>
-      <div class="podium-block"></div>
-    `;
-    podium.appendChild(item);
-  });
-
-  // 4位以下リスト
-  const mini = document.getElementById('resultList');
-  mini.innerHTML = '';
-  results.slice(3).forEach((r, i) => {
-    const def = PLAYER_DEFS.find(d => d.id === r.playerId) || r;
-    const item = document.createElement('div');
-    item.className = 'rli';
-    item.innerHTML = `
-      <div class="rli-rank">${RANK_ICONS[3+i]||4+i}</div>
-      <img class="rli-avatar" src="${def.avatar}" alt="${r.nickname}">
-      <div class="rli-info">
-        <div class="rli-name" style="color:${def.color}">${r.nickname}</div>
-        <div class="rli-stat">${r.dnf ? 'タイムオーバー' : `正確率${r.accuracy}% / ${(r.time/1000).toFixed(1)}秒`}</div>
-      </div>
-      <div class="rli-pts">+${r.pointsEarned??0}pt</div>
-    `;
-    mini.appendChild(item);
-  });
-
-  const hint = document.getElementById('nextHint');
-  hint.textContent = round >= maxRounds
-    ? '全ラウンド終了！最終結果を確認中...'
-    : '準備ができたら「準備OK」を押してください';
-
-  renderScoreboard(scoreboard);
-  showScreen('roundend');
-}
-
-// ── ゲーム終了 ────────────────────────────────────────
-function showGameOver(scoreboard) {
-  const sorted = [...scoreboard].sort((a,b) => b.score - a.score);
-
-  // big podium top3
-  const podium = document.getElementById('finalPodium');
-  podium.innerHTML = '';
-  const top3 = sorted.slice(0,3);
-  const dOrder = top3.length >= 2 ? [top3[1], top3[0], top3[2]].filter(Boolean) : top3;
-  dOrder.forEach(p => {
-    const realRank = sorted.indexOf(p) + 1;
-    const def = PLAYER_DEFS.find(d => d.id === p.id) || p;
-    const item = document.createElement('div');
-    item.className = `fp-item rank-${realRank}`;
-    item.innerHTML = `
-      <div class="fp-icon">${RANK_ICONS[realRank-1]||''}</div>
-      <img class="fp-avatar" src="${def.avatar}" alt="${p.nickname}">
-      <div class="fp-nick" style="color:${def.color}">${p.nickname}</div>
-      <div class="fp-pts">${p.score}pt</div>
-      <div class="fp-block"></div>
-    `;
-    podium.appendChild(item);
-  });
-
-  // full ranking list
-  const ranking = document.getElementById('finalRanking');
-  ranking.innerHTML = '';
-  sorted.forEach((p, i) => {
-    const def = PLAYER_DEFS.find(d => d.id === p.id) || p;
-    const item = document.createElement('div');
-    item.className = 'fr-item';
-    item.innerHTML = `
-      <div class="fr-rank">${RANK_ICONS[i]||i+1}</div>
-      <img class="fr-avatar" src="${def.avatar}" alt="${p.nickname}">
-      <div class="fr-info">
-        <div class="fr-name" style="color:${def.color}">${p.nickname}</div>
-        <div class="fr-nick">${def.name}</div>
-      </div>
-      <div class="fr-pts">${p.score}pt</div>
-    `;
-    ranking.appendChild(item);
-  });
-
-  document.getElementById('chatworkMsg').textContent = 'Chatworkに結果を送信中...';
-  spawnConfetti();
-
-  // 思い出の写真をランダムで背景にちらっと表示
-  showMemoryPhoto();
-
-  showScreen('gameover');
-}
-
-// ── 思い出の写真演出 ──────────────────────────────────
-function showMemoryPhoto() {
-  const wrap = document.getElementById('confettiCanvas');
-  const src  = MEMORY_PHOTOS[Math.floor(Math.random() * MEMORY_PHOTOS.length)];
-  const img  = document.createElement('img');
-  img.src = src;
-  img.style.cssText = `
-    position:absolute; bottom:20px; right:24px;
-    width:160px; height:160px; object-fit:cover;
-    border-radius:12px; border:3px solid rgba(255,255,255,.2);
-    opacity:0; animation:photoFadeIn 1s ease 1s both;
-    box-shadow:0 8px 32px rgba(0,0,0,.5);
-  `;
-  const style = document.createElement('style');
-  style.textContent = `@keyframes photoFadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:.85;transform:translateY(0)}}`;
-  document.head.appendChild(style);
-  wrap.appendChild(img);
+// ── 画面切替 ──────────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const MAP = { lobby: 'screen-lobby', countdown: 'screen-countdown', game: 'screen-game', result: 'screen-result' };
+  const el = document.getElementById(MAP[name]);
+  if (el) el.classList.add('active');
 }
 
 // ── 紙吹雪 ────────────────────────────────────────────
@@ -510,33 +381,165 @@ function spawnConfetti() {
   const wrap   = document.getElementById('confettiCanvas');
   wrap.innerHTML = '';
   const colors = ['#c084fc','#f5c842','#06D6A0','#E91E8C','#00B4D8','#FFB703','#4ade80','#818cf8'];
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 120; i++) {
     const el = document.createElement('div');
-    el.className = 'cf';
+    el.className  = 'cf';
     el.style.cssText = `
-      left:${Math.random()*100}vw;
-      background:${colors[Math.floor(Math.random()*colors.length)]};
-      width:${6+Math.random()*8}px;
-      height:${10+Math.random()*12}px;
-      border-radius:${Math.random()>.5?'50%':'2px'};
-      animation-duration:${1.5+Math.random()*2.5}s;
-      animation-delay:${Math.random()*2}s;
+      left:${Math.random() * 100}vw;
+      background:${colors[Math.floor(Math.random() * colors.length)]};
+      width:${6 + Math.random() * 8}px; height:${10 + Math.random() * 12}px;
+      border-radius:${Math.random() > .5 ? '50%' : '2px'};
+      animation-duration:${1.5 + Math.random() * 2.5}s;
+      animation-delay:${Math.random() * 2}s;
     `;
     wrap.appendChild(el);
   }
 }
 
-// ── 画面切替 ──────────────────────────────────────────
-const SCREEN_MAP = { lobby:'screen-lobby', countdown:'screen-countdown', game:'screen-game', roundend:'screen-roundend', gameover:'screen-gameover' };
-function showScreen(name) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById(SCREEN_MAP[name]);
-  if (el) el.classList.add('active');
+// ════════════════════════════════════════════════════
+// AUDIO
+// ════════════════════════════════════════════════════
+
+let audioCtx    = null;
+let soundEnabled = true;
+let masterGain  = null;
+let bgmTimer    = null;
+let bgmMelIdx   = 0;
+let bgmBassIdx  = 0;
+let bgmMelNext  = 0;
+let bgmBassNext = 0;
+
+function ensureAudio() {
+  if (audioCtx) return;
+  audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 1;
+  masterGain.connect(audioCtx.destination);
 }
 
-// ── モーダル ──────────────────────────────────────────
-function showModal(msg) {
-  document.getElementById('modalText').textContent = msg;
-  document.getElementById('modal').classList.remove('hidden');
+function setupSoundToggle() {
+  const btn = document.getElementById('soundToggle');
+  btn.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    btn.textContent = soundEnabled ? '🔊' : '🔇';
+    if (masterGain) masterGain.gain.value = soundEnabled ? 1 : 0;
+  });
 }
-function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+// ── タイピング音 ──────────────────────────────────────
+function playTypingSound() {
+  if (!soundEnabled || !audioCtx) return;
+  const osc  = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const now  = audioCtx.currentTime;
+  osc.type = 'square';
+  osc.frequency.value = 900 + Math.random() * 150;
+  gain.gain.setValueAtTime(0.05, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+  osc.connect(gain);
+  gain.connect(masterGain);
+  osc.start(now);
+  osc.stop(now + 0.05);
+}
+
+// ── BGM（疾走感） ─────────────────────────────────────
+// BPM 165, 16分音符ベース
+const _S  = 60 / 165 / 4;  // 16分音符 ≈ 0.091s
+const _S2 = _S * 2;         // 8分音符
+const _S4 = _S * 4;         // 4分音符
+
+// 4小節ループメロディ（C-Am-F-G、疾走感のある上昇下降）
+const MEL = [
+  // 小節1: C（上昇スプリント）
+  [523.25,_S],[659.25,_S],[783.99,_S],[659.25,_S],
+  [880.00,_S],[783.99,_S],[659.25,_S],[523.25,_S],
+  [659.25,_S],[783.99,_S],[880.00,_S],[659.25,_S],
+  [880.00,_S2],           [880.00,_S2],
+  // 小節2: Am（高音ゾーン）
+  [880.00,_S],[987.77,_S],[1046.5,_S],[987.77,_S],
+  [880.00,_S],[783.99,_S],[880.00,_S],[987.77,_S],
+  [1046.5,_S2],           [987.77,_S],[880.00,_S],
+  [783.99,_S2],           [0,     _S2],
+  // 小節3: F（ドライビング）
+  [698.46,_S],[880.00,_S],[1046.5,_S],[880.00,_S],
+  [1046.5,_S],[880.00,_S],[698.46,_S],[880.00,_S],
+  [880.00,_S],[1046.5,_S],[880.00,_S],[698.46,_S],
+  [880.00,_S2],           [783.99,_S2],
+  // 小節4: G→C（解放スプリント）
+  [783.99,_S],[880.00,_S],[987.77,_S],[783.99,_S],
+  [880.00,_S2],           [783.99,_S],[659.25,_S],
+  [587.33,_S],[659.25,_S],[783.99,_S],[659.25,_S],
+  [523.25,_S4],
+];
+
+// ベース: ルート+5度交互（8分音符）
+const BASS = [
+  [130.81,_S2],[196.00,_S2],[130.81,_S2],[196.00,_S2],  // C小節
+  [130.81,_S2],[196.00,_S2],[130.81,_S2],[196.00,_S2],
+  [110.00,_S2],[164.81,_S2],[110.00,_S2],[164.81,_S2],  // Am小節
+  [110.00,_S2],[164.81,_S2],[110.00,_S2],[164.81,_S2],
+  [87.31, _S2],[130.81,_S2],[87.31, _S2],[130.81,_S2],  // F小節
+  [87.31, _S2],[130.81,_S2],[87.31, _S2],[130.81,_S2],
+  [98.00, _S2],[146.83,_S2],[98.00, _S2],[146.83,_S2],  // G小節
+  [98.00, _S2],[196.00,_S2],[98.00, _S2],[196.00,_S2],
+];
+
+let bgmHatNext = 0;
+
+function startBGM() {
+  if (!audioCtx) return;
+  bgmMelIdx  = 0; bgmBassIdx  = 0;
+  bgmMelNext = bgmBassNext = bgmHatNext = audioCtx.currentTime + 0.1;
+  bgmTimer   = setInterval(_scheduleBGM, 50);
+}
+
+function stopBGM() {
+  if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; }
+}
+
+function _scheduleBGM() {
+  if (!audioCtx) return;
+  const ahead = audioCtx.currentTime + 0.25;
+
+  while (bgmMelNext < ahead) {
+    const [f, d] = MEL[bgmMelIdx % MEL.length];
+    if (f > 0) _bgmNote(f, d, 'triangle', bgmMelNext, 0.06);
+    bgmMelNext += d; bgmMelIdx++;
+  }
+  while (bgmBassNext < ahead) {
+    const [f, d] = BASS[bgmBassIdx % BASS.length];
+    _bgmNote(f, d, 'sine', bgmBassNext, 0.09);
+    bgmBassNext += d; bgmBassIdx++;
+  }
+  while (bgmHatNext < ahead) {
+    _hihat(bgmHatNext);
+    bgmHatNext += _S2;
+  }
+}
+
+function _bgmNote(freq, dur, type, when, vol) {
+  const osc  = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + dur * 0.85);
+  osc.connect(gain); gain.connect(masterGain);
+  osc.start(when); osc.stop(when + dur);
+}
+
+function _hihat(when) {
+  const len = Math.floor(audioCtx.sampleRate * 0.022);
+  const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d   = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src  = audioCtx.createBufferSource();
+  const hp   = audioCtx.createBiquadFilter();
+  const gain = audioCtx.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 8000;
+  gain.gain.setValueAtTime(0.055, when);
+  gain.gain.exponentialRampToValueAtTime(0.001, when + 0.018);
+  src.buffer = buf;
+  src.connect(hp); hp.connect(gain); gain.connect(masterGain);
+  src.start(when);
+}
