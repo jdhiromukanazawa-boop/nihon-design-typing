@@ -179,7 +179,7 @@ const TEXTS = [
     'watashi ga watashi ga watashi ga',
     '社員キーワード'),
   T('有限会社阿部製麺所',
-    'yuugen gaisha abe seimensho',
+    'yuugen gaisha abe seimenjo',
     '社員キーワード'),
   T('剣道14年',
     'kendou juuyon nen',
