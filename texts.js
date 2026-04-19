@@ -176,13 +176,16 @@ const TEXTS = [
 
   T('私が！私が！私が！',
     'watashi ga watashi ga watashi ga',
-    '社長の名言'),
+    '社員キーワード'),
   T('有限会社阿部製麺所',
     'yuugen gaisha abe seimensho',
-    '会社名'),
+    '社員キーワード'),
   T('剣道14年',
     'kendou juuyon nen',
-    '社長の名言'),
+    '社員キーワード'),
+  T('ミスドでバイト',
+    'misudo de baito',
+    '社員キーワード'),
 ];
 
 module.exports = { PLAYERS, TEXTS };
