@@ -158,8 +158,8 @@ const TEXTS = [
     'hiromu san to hanashite jibun no kimochi ga maemuki ni kawatte torikumu koto ga dekiru',
     'みわからひろむへ', true),
 
-  T('いつもひろむさんの気持ちが前向きになるような話し方、接し方をしてくれる',
-    'itsumo hiromu san no kimochi ga maemuki ni naru you na hanashikata sesshikata wo shite kureru',
+  T('いつもひろむさんは気持ちが前向きになるような話し方、接し方をしてくれる',
+    'itsumo hiromu san ha kimochi ga maemuki ni naru you na hanashikata sesshikata wo shite kureru',
     'みわからひろむへ', true),
 
   T('ひろむさんと話したかっこいい人になれるようがんばります',
