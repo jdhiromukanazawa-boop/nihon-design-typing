@@ -301,7 +301,15 @@ function romajiCandidates(exp, pos) {
   if (map3[e3]) return map3[e3].map(t => [3, t]);
 
   // 2文字パターン
-  const map2 = { fu:['fu','hu'], ji:['ji','zi'] };
+  const map2 = {
+    fu:['fu','hu'], ji:['ji','zi'],
+    // 小さいかな (le/xe = ぇ, la/xa = ぁ, etc.)
+    le:['le','xe'], xe:['xe','le'],
+    la:['la','xa'], xa:['xa','la'],
+    li:['li','xi'], xi:['xi','li'],
+    lu:['lu','xu'], xu:['xu','lu'],
+    lo:['lo','xo'], xo:['xo','lo'],
+  };
   if (map2[e2]) return map2[e2].map(t => [2, t]);
 
   // 「ん」(n) の処理：次が子音か末尾なら nn も OK

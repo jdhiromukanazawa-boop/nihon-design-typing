@@ -44,7 +44,7 @@ const TEXTS = [
 
   // ── 社長の名言（短め）────────────────────────────
   T('アホやね',                         'aho ya ne',                               '社長の名言'),
-  T('順調？',                           'junchou',                                 '社長の名言'),
+  T('順調？',                           'junchou ?',                               '社長の名言'),
   T('もう一回とかない',                 'mou ikkai toka nai',                      '社長の名言'),
   T('量より質よりスピード',             'ryou yori shitsu yori supi-do',           '社長の名言'),
   T('選ぶ権利はまだない',               'erabu kenri ha mada nai',                 '社長の名言'),
@@ -77,8 +77,8 @@ const TEXTS = [
   T('心が強い奴に心を任せる',           'kokoro ga tsuyoi yatsu ni kokoro wo makaseru', '社長の名言'),
 
   // ── 長文（long: true）────────────────────────────
-  T('日本人の生き方 働き方をより幸せにする',
-    'nihon jin no ikikata hatarakikata wo yori shiawase ni suru',
+  T('日本人の生き方・働き方をより幸せにする',
+    'nihon jin no ikikata / hatarakikata wo yori shiawase ni suru',
     'ミッション', true),
 
   T('誰もが生きたいと思う世界 誰もが行きたいと思う未来',
@@ -122,12 +122,12 @@ const TEXTS = [
     'jibun no ganmen naguri makutta yo ne sono toki ha',
     '社長の名言', true),
 
-  T('子供に選ばれる会社ではなく 大人に選ばれる会社',
-    'kodomo ni erabareru kaisha de ha naku otona ni erabareru kaisha',
+  T('子供に選ばれる会社ではなく、大人に選ばれる会社',
+    'kodomo ni erabareru kaisha de ha naku , otona ni erabareru kaisha',
     '社長の名言', true),
 
-  T('ストレスを感じたとき ストレスを減らそうと思ってはならない',
-    'sutoresu wo kanjita toki sutoresu wo herasou to omotte ha naranai',
+  T('ストレスを感じたとき、ストレスを減らそうと思ってはならない',
+    'sutoresu wo kanjita toki , sutoresu wo herasou to omotte ha naranai',
     '社長の名言', true),
 
   T('このギブを貰ったままだとテイカーになってしまう',
@@ -138,13 +138,13 @@ const TEXTS = [
     'dou shitara dekiru ka wo kangaeru no ga otona',
     '社長の名言', true),
 
-  T('高め合うパートナーでない限り そのパートナーは必ずあなたの足を引っ張る',
-    'takame au pa-tona- de nai kagiri sono pa-tona- ha kanarazu anata no ashi wo hipparu',
+  T('高め合うパートナーでない限り、そのパートナーは必ずあなたの足を引っ張る',
+    'takame au pa-tona- de nai kagiri , sono pa-tona- ha kanarazu anata no ashi wo hipparu',
     '社長の名言', true),
 
   // ── みわちゃんからひろむさんへ ──────────────────
   T('ひろむさんが一緒に成長していこうって言ってくださったこと、とても嬉しかったです',
-    'hiromu san ga issho ni seichou shite ikou tte itte kudasatta koto totemo ureshikatta desu',
+    'hiromu san ga issho ni seichou shite ikou tte itte kudasatta koto , totemo ureshikatta desu',
     '感謝のメッセージ', true),
 
   T('でもひろむさんみたいな人になりたいので頑張ります',
@@ -155,12 +155,12 @@ const TEXTS = [
     'hiromu san to hanasu to shigoto toka sore igai no koto mo zenbu ganbarou tte omou',
     '感謝のメッセージ', true),
 
-  T('ひろむさんと話して自分の気持ちが前向きに変わって 取り組むことができる',
-    'hiromu san to hanashite jibun no kimochi ga maemuki ni kawatte torikumu koto ga dekiru',
+  T('ひろむさんと話して自分の気持ちが前向きに変わって、取り組むことができる',
+    'hiromu san to hanashite jibun no kimochi ga maemuki ni kawatte , torikumu koto ga dekiru',
     '感謝のメッセージ', true),
 
-  T('いつもひろむさんは気持ちが前向きになるような話し方 接し方をしてくれる',
-    'itsumo hiromu san ha kimochi ga maemuki ni naru you na hanashikata sesshikata wo shite kureru',
+  T('いつもひろむさんは気持ちが前向きになるような話し方、接し方をしてくれる',
+    'itsumo hiromu san ha kimochi ga maemuki ni naru you na hanashikata , sesshikata wo shite kureru',
     '感謝のメッセージ', true),
 
   T('ひろむさんと話したかっこいい人になれるようがんばります',
@@ -176,7 +176,7 @@ const TEXTS = [
     '感謝のメッセージ', true),
 
   T('私が！私が！私が！',
-    'watashi ga watashi ga watashi ga',
+    'watashi ga ! watashi ga ! watashi ga !',
     '社員キーワード'),
   T('有限会社阿部製麺所',
     'yuugen gaisha abe seimenjo',
@@ -188,7 +188,7 @@ const TEXTS = [
     'hotate to misudo no nitouryuu',
     '社員キーワード'),
   T('ワンモア！モアイズ',
-    'wan moa moa izu',
+    'wan moa ! moa izu',
     '社員キーワード'),
   T('人生はシャンパンタワー',
     'jinsei ha shanpan tawa-',
@@ -199,15 +199,15 @@ const TEXTS = [
 
   // ── 大坪さんカルタより（追加分）────────────────────
   T('2度目とかなかったからね みんな幸せだよねぇ',
-    'nidome toka nakatta kara ne minna shiawase da yo ne',
+    'nidome toka nakatta kara ne minna shiawase da yo ne le',
     '社長の名言', true),
 
   T('まあ どうなりたいかだよねぇ',
-    'maa dou naritai ka da yo ne',
+    'maa dou naritai ka da yo ne le',
     '社長の名言'),
 
   T('目先の感謝とか ありがたいけどねぇ',
-    'mesaki no kansha toka arigatai kedo ne',
+    'mesaki no kansha toka arigatai kedo ne le',
     '社長の名言'),
 ];
 
