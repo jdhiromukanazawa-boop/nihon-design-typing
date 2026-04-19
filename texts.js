@@ -151,8 +151,8 @@ const TEXTS = [
     'demo hiromu san mitaina hito ni naritai no de ganbarimasu',
     '感謝のメッセージ', true),
 
-  T('ひろむさんが元気にいると仕事とかそれ以外のことも全部頑張ろうって思う',
-    'hiromu san ga genki ni iru to shigoto toka sore igai no koto mo zenbu ganbarou tte omou',
+  T('ひろむさんと話すと仕事とかそれ以外のことも全部頑張ろうって思う',
+    'hiromu san to hanasu to shigoto toka sore igai no koto mo zenbu ganbarou tte omou',
     '感謝のメッセージ', true),
 
   T('ひろむさんと話して自分の気持ちが前向きに変わって、取り組むことができる',
