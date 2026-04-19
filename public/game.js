@@ -304,7 +304,6 @@ function showResult(score, avgWpm, avgAcc) {
   document.getElementById('resultAccuracy').textContent = `${avgAcc}%`;
 
   renderLeaderboard('resultLeaderboard', leaderboard);
-  renderMemoryPlayers();
   spawnConfetti();
   showScreen('result');
 
@@ -315,30 +314,6 @@ function showResult(score, avgWpm, avgAcc) {
   };
 }
 
-// ── 思い出の社員 ──────────────────────────────────────
-const MEMORY_MSGS = [
-  'ひろむさんが一緒に成長していこうって言ってくださったこと、とても嬉しかったです',
-  'ひろむさんと話して自分の気持ちが前向きに変わって、取り組むことができる',
-  'ひろむさんが毎回本気で向き合ってくれることが本当に有難いです',
-  '「自分の選択を正解にしていこう」という言葉が大好きで、いつも背中を押してもらっています',
-  'これからも諦めずに、強くなれるよう頑張ります',
-  'ひろむさんのお陰で、仕事に対して真剣に向き合えています',
-  '日本デザインで働けて、本当によかったです',
-  '皆さんと一緒に、もっと成長したいと思っています',
-];
-
-function renderMemoryPlayers() {
-  const wrap = document.getElementById('memoryPlayers');
-  wrap.innerHTML = PLAYER_DEFS.map(p => `
-    <div class="mem-player${myPlayer && p.id === myPlayer.id ? ' mem-me' : ''}">
-      <img class="mem-avatar" src="${p.avatar}" alt="${p.name}" onerror="this.src='/avatars/fallback.png'">
-      <div class="mem-nick" style="color:${p.color}">${p.nickname}</div>
-    </div>
-  `).join('');
-
-  const msg = document.getElementById('memoryMsg');
-  msg.textContent = '「' + MEMORY_MSGS[Math.floor(Math.random() * MEMORY_MSGS.length)] + '」';
-}
 
 // ── リーダーボード ────────────────────────────────────
 function renderLeaderboard(containerId, records) {
