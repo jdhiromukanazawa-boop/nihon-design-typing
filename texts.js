@@ -145,35 +145,35 @@ const TEXTS = [
   // ── みわちゃんからひろむさんへ ──────────────────
   T('ひろむさんが一緒に成長していこうって言ってくださったこと、とても嬉しかったです',
     'hiromu san ga issho ni seichou shite ikou tte itte kudasatta koto , totemo ureshikatta desu',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('でもひろむさんみたいな人になりたいので頑張ります',
     'demo hiromu san mitaina hito ni naritai no de ganbarimasu',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('ひろむさんと話すと仕事とかそれ以外のことも全部頑張ろうって思う',
     'hiromu san to hanasu to shigoto toka sore igai no koto mo zenbu ganbarou tte omou',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('ひろむさんと話して自分の気持ちが前向きに変わって、取り組むことができる',
     'hiromu san to hanashite jibun no kimochi ga maemuki ni kawatte , torikumu koto ga dekiru',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('いつもひろむさんは気持ちが前向きになるような話し方、接し方をしてくれる',
     'itsumo hiromu san ha kimochi ga maemuki ni naru you na hanashikata , sesshikata wo shite kureru',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('ひろむさんと話したかっこいい人になれるようがんばります',
     'hiromu san to hanashita kakkoii hito ni nareru you ganbarimasu',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('ひろむさんに何かをあげれるような人になりたいです',
     'hiromu san ni nanika wo agereru you na hito ni naritai desu',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('こんな良い人っているんだって思う',
     'konna ii hito tte iru n da tte omou',
-    '感謝のメッセージ', true),
+    '感謝メッセージ', true),
 
   T('私が！私が！私が！',
     'watashi ga ! watashi ga ! watashi ga !',

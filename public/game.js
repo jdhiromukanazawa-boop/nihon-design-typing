@@ -300,9 +300,11 @@ function romajiCandidates(exp, pos) {
                  dzu:['dzu','du'] };
   if (map3[e3]) return map3[e3].map(t => [3, t]);
 
-  // 2文字パターン
+  // 2文字パターン（eFwd=2, 代替入力も含む）
   const map2 = {
     fu:['fu','hu'], ji:['ji','zi'],
+    // じゃ行（ja/ju/jo/je → zya/zyu/zyo/zye でも入力可）
+    ja:['ja','zya'], ju:['ju','zyu'], jo:['jo','zyo'], je:['je','zye'],
     // 小さいかな (le/xe = ぇ, la/xa = ぁ, etc.)
     le:['le','xe'], xe:['xe','le'],
     la:['la','xa'], xa:['xa','la'],
