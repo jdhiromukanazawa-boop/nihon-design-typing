@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
 const { PLAYERS } = require('./texts');
-const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getTopScores, getTodayScores, getYesterdayScores } = require('./db');
+const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getPlayerBest, getTopScores, getTodayScores, getYesterdayScores } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -140,6 +140,10 @@ io.on('connection', (socket) => {
     const playerDef = PLAYERS.find(p => p.id === playerId);
     if (!playerDef) return;
 
+    // 保存前に歴代ベストを取得
+    let prevBest = null;
+    try { prevBest = await getPlayerBest(playerId); } catch (e) { /* 無視 */ }
+
     const rounded = {
       playerId,
       name:        playerDef.name,
@@ -154,13 +158,20 @@ io.on('connection', (socket) => {
       }),
     };
 
-    // Supabase に保存してIDを取得し、dailyRecords に紐付ける
+    // Supabase に保存してIDを取得
     try {
       const dbId = await saveScore(rounded);
       rounded.id = dbId;
     } catch (e) {
       console.error('[Score] 保存エラー:', e.message);
     }
+
+    // ハイスコア判定結果をクライアントに返す
+    socket.emit('scoreResult', {
+      isNewBest: prevBest === null || rounded.score > prevBest,
+      prevScore: prevBest || 0,
+      newScore:  rounded.score,
+    });
 
     dailyRecords.push(rounded);
     dailyRecords.sort((a, b) => b.score - a.score);

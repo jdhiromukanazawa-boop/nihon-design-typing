@@ -152,6 +152,27 @@ function connectSocket() {
     renderLeaderboard('resultLeaderboard', records);
   });
   socket.on('gameData', ({ texts }) => beginGame(texts));
+
+  socket.on('scoreResult', ({ isNewBest, prevScore, newScore }) => {
+    const el = document.getElementById('resultHighScore');
+    if (!el) return;
+    if (!isNewBest) { el.style.display = 'none'; return; }
+
+    const prevRank = getRank(prevScore);
+    const newRank  = getRank(newScore);
+    const diff     = newScore - prevScore;
+
+    let msg;
+    if (prevScore === 0) {
+      msg = `🏆 初記録達成！${newRank.label}！`;
+    } else if (prevRank.label === newRank.label) {
+      msg = `🔥 ハイスコア更新！+${diff}pt 向上！`;
+    } else {
+      msg = `🔥 ハイスコア更新！${prevRank.label} → ${newRank.label}！+${diff}pt 向上！`;
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
+  });
 }
 
 // ── ロビー ────────────────────────────────────────────
@@ -612,6 +633,10 @@ function showResult(score, avgWpm, avgAcc) {
   const info = PIC_INFO[picNum] || PIC_INFO[1];
   document.getElementById('picTitle').textContent = `「${info.title}」`;
   document.getElementById('picRarity').innerHTML = starsHtml(info.rarity);
+
+  // ハイスコアバッジは scoreResult イベント到着まで非表示
+  const hsBadge = document.getElementById('resultHighScore');
+  if (hsBadge) hsBadge.style.display = 'none';
 
   const rank = getRank(score);
   const rankEl = document.getElementById('resultRank');

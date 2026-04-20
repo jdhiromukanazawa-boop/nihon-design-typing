@@ -94,6 +94,18 @@ async function saveScore({ playerId, name, nickname, color, score, avgWpm, avgAc
   return data.id; // Supabase の行ID を返す
 }
 
+// キャラクターの歴代最高スコアを取得（新スコア保存前に呼ぶ）
+async function getPlayerBest(playerId) {
+  const { data, error } = await supabase
+    .from('scores')
+    .select('score')
+    .eq('player_id', playerId)
+    .order('score', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data && data.length > 0 ? data[0].score : null;
+}
+
 async function deleteScoreById(id) {
   const { error } = await supabase
     .from('scores')
@@ -183,4 +195,4 @@ async function getTodayScores(limit = 30) {
   }));
 }
 
-module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getTopScores, getTodayScores, getYesterdayScores };
+module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getPlayerBest, getTopScores, getTodayScores, getYesterdayScores };
