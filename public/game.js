@@ -173,6 +173,14 @@ function buildLobby() {
   });
 
   document.getElementById('startBtn').addEventListener('click', requestStart);
+
+  // ゲスト名入力 → ボタン有効/無効を動的切り替え
+  document.getElementById('guestNameInput').addEventListener('input', () => {
+    if (!myPlayer || myPlayer.id !== 'guest') return;
+    const hasName = document.getElementById('guestNameInput').value.trim().length > 0;
+    document.getElementById('startBtn').disabled = !hasName;
+    document.getElementById('startHint').style.display = hasName ? 'block' : 'none';
+  });
 }
 
 function selectPlayer(id) {
@@ -188,13 +196,19 @@ function selectPlayer(id) {
   void card.offsetWidth;
   card.classList.add('mine-pop');
   const guestWrap = document.getElementById('guestNameWrap');
-  if (guestWrap) {
-    guestWrap.style.display = id === 'guest' ? 'block' : 'none';
-    if (id === 'guest') setTimeout(() => document.getElementById('guestNameInput').focus(), 50);
-  }
   const btn = document.getElementById('startBtn');
-  btn.disabled = false;
-  document.getElementById('startHint').style.display = 'block';
+  if (id === 'guest') {
+    guestWrap.style.display = 'block';
+    setTimeout(() => document.getElementById('guestNameInput').focus(), 50);
+    // 名前が入力済みのときだけ有効
+    const name = document.getElementById('guestNameInput').value.trim();
+    btn.disabled = name.length === 0;
+    document.getElementById('startHint').style.display = name.length === 0 ? 'none' : 'block';
+  } else {
+    guestWrap.style.display = 'none';
+    btn.disabled = false;
+    document.getElementById('startHint').style.display = 'block';
+  }
 }
 
 function setupSpaceStart() {
@@ -211,7 +225,8 @@ function requestStart() {
   ensureAudio();
   if (myPlayer.id === 'guest') {
     const name = document.getElementById('guestNameInput').value.trim();
-    if (name) myPlayer = { ...myPlayer, nickname: name, name: name };
+    if (!name) return; // 名前未入力は弾く
+    myPlayer = { ...myPlayer, nickname: name, name: name };
   }
   document.getElementById('startBtn').disabled = true;
   document.getElementById('startHint').style.display = 'none';
