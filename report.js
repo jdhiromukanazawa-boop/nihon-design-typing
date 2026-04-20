@@ -62,16 +62,38 @@ async function postMessage(body) {
   }
 }
 
-// ── 朝のレポート（9:00）────────────────────────────────
-async function morningReport() {
+const GAME_URL = 'https://nihon-design-typing.onrender.com/';
+
+// ── 朝のレポート（8:00）+ 昨日の最終結果 ──────────────
+async function morningReport(yesterdayResults) {
+  let yesterdaySection;
+  if (yesterdayResults && yesterdayResults.length > 0) {
+    const medal = ['🥇','🥈','🥉'];
+    const lines = yesterdayResults.slice(0, 5).map((p, i) =>
+      `${medal[i] || `${i+1}位`}　${p.nickname}（${p.name}）　${p.score}pt`
+    );
+    const winner = yesterdayResults[0];
+    yesterdaySection = [
+      '📊 [b]昨日の最終ランキング[/b]',
+      ...lines,
+      '',
+      `昨日の優勝は [b]${winner.nickname}（${winner.name}）[/b]！${winner.score}pt 🏆`,
+      '今日こそ王座を奪いに行こう！',
+    ].join('\n');
+  } else {
+    yesterdaySection = '昨日のプレイ記録はありません。\n今日が初日！記録を作ろう！🏁';
+  }
+
   const msg = [
     `[info][title]🌅 おはようございます！ ${todayJP()}[/title]`,
+    yesterdaySection,
+    '',
     `[qt]${randomQuote()}[/qt]`,
     '',
     '今日も一日、楽しく成長しましょう！',
     '',
-    '🎹 [b]タイピング大会[/b] は随時開催中！',
-    '　→ 社長の名言・会社理念を打ちながら競い合おう',
+    `🎹 [b]タイピング大会[/b] 随時開催中！`,
+    `　→ ${GAME_URL}`,
     '[/info]',
   ].join('\n');
   await postMessage(msg);
@@ -123,6 +145,8 @@ async function intermediateReport(todayResults) {
     content,
     '',
     rally,
+    '',
+    `▶ 今すぐプレイ → ${GAME_URL}`,
     '[/info]',
   ].join('\n');
   await postMessage(msg);
@@ -149,6 +173,8 @@ async function eveningReport(todayResults) {
     content,
     '',
     `[qt]${randomQuote()}[/qt]`,
+    '',
+    `🎹 まだ間に合う！ → ${GAME_URL}`,
     '[/info]',
   ].join('\n');
   await postMessage(msg);

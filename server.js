@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
 const { PLAYERS } = require('./texts');
-const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores, getTodayScores } = require('./db');
+const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores, getTodayScores, getYesterdayScores } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -168,11 +168,16 @@ cron.schedule('0 0 * * *', () => {
   io.emit('leaderboardUpdate', dailyRecords);
 }, { timezone: 'Asia/Tokyo' });
 
-// 朝の一言（9:00 JST）
-cron.schedule('0 9 * * *', () => {
+// 朝のレポート（8:00 JST）+ 昨日の最終結果
+cron.schedule('0 8 * * *', async () => {
   if (!reportEnabled()) return;
   console.log('[Cron] 朝のレポート');
-  report.morningReport();
+  try {
+    const yesterday = await getYesterdayScores();
+    await report.morningReport(yesterday);
+  } catch (e) {
+    console.error('[Cron] 朝のレポートエラー:', e.message);
+  }
 }, { timezone: 'Asia/Tokyo' });
 
 // 中間速報（10:00 JST）
