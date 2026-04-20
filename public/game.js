@@ -11,23 +11,41 @@ const PLAYER_DEFS = [
 
 const RANK_ICONS = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
 
+// rarity: 1=N 2=R 3=SR 4=SSR 5=UR 6=LR(レジェンド)
 const PIC_INFO = [
   null,
-  { title: 'まだ諦めてない精神は褒めたい', rarity: 1 },
-  { title: '次回に期待している', rarity: 1 },
-  { title: 'まあ悪くはないと思う…たぶん', rarity: 2 },
-  { title: 'これは才能の片鱗を感じる', rarity: 2 },
-  { title: 'ちょっと待って本当に上手い', rarity: 3 },
-  { title: '指が人間のものではない', rarity: 3 },
-  { title: '会社の星に認定します', rarity: 4 },
-  { title: '大坪さんに見せたいやつ', rarity: 4 },
-  { title: '伝説の誕生を目撃した', rarity: 5 },
-  { title: '神・ゲーム・タイピング', rarity: 5 },
+  { title: 'まだ諦めてない精神は褒めたい',     rarity: 1 },
+  { title: '次回に期待している',               rarity: 1 },
+  { title: 'まあ悪くはないと思う…たぶん',     rarity: 2 },
+  { title: 'これは才能の片鱗を感じる',         rarity: 2 },
+  { title: 'ちょっと待って本当に上手い',       rarity: 3 },
+  { title: '指が人間のものではない',           rarity: 3 },
+  { title: '会社の星に認定します',             rarity: 4 },
+  { title: '大坪さんに見せたいやつ',           rarity: 4 },
+  { title: '伝説の誕生を目撃した',             rarity: 5 },
+  { title: '神・ゲーム・タイピング',           rarity: 5 },
+  { title: 'これは人類の限界を超えている',     rarity: 5 },
+  { title: '次元が違う。もはや別の生き物',     rarity: 5 },
+  { title: '殿堂入り。神話の域に達した',       rarity: 6 },
+];
+
+const RARITY_DEF = [
+  null,
+  { label: 'N',  color: '#9CA3AF', bg: '#f3f4f6' },
+  { label: 'R',  color: '#22c55e', bg: '#f0fdf4' },
+  { label: 'SR', color: '#3b82f6', bg: '#eff6ff' },
+  { label: 'SSR',color: '#a855f7', bg: '#faf5ff' },
+  { label: 'UR', color: '#f59e0b', bg: '#fffbeb' },
+  { label: 'LR', color: '#ef4444', bg: '#fff1f2' }, // レジェンドレア
 ];
 
 function starsHtml(rarity) {
-  return '<span class="stars-filled">' + '★'.repeat(rarity) + '</span>' +
-         '<span class="stars-empty">' + '☆'.repeat(5 - rarity) + '</span>';
+  const def = RARITY_DEF[rarity] || RARITY_DEF[1];
+  const starCount = Math.min(rarity, 5);
+  const stars = `<span style="color:${def.color}">${'★'.repeat(starCount)}</span>` +
+                `<span style="color:#d1d5db">${'☆'.repeat(Math.max(0, 5 - starCount))}</span>`;
+  const badge = `<span class="rarity-badge" style="color:${def.color};border-color:${def.color};background:${def.bg}">${def.label}</span>`;
+  return badge + ' ' + stars;
 }
 
 // ── 状態 ──────────────────────────────────────────────
@@ -600,14 +618,16 @@ function getFeedback(avgAcc, avgWpm) {
 
 // ── スコアに応じたpic選択（ランダム要素あり）──────────
 function picForScore(score) {
-  // スコア帯に応じたベース値（高スコアほど高い番号が出やすい）
-  const base = score >= 1800 ? 8 :
-               score >= 1200 ? 6 :
-               score >= 700  ? 4 :
-               score >= 300  ? 2 : 0;
-  // base〜base+3 の範囲からランダム選択（1〜10にクランプ）
-  const pick = base + Math.floor(Math.random() * 4);
-  return Math.max(1, Math.min(10, pick + 1));
+  // [min, max] の範囲からランダム選択（高スコアほど高レア帯）
+  const [lo, hi] =
+    score >= 3000 ? [11, 13] :
+    score >= 2300 ? [10, 12] :
+    score >= 1700 ? [ 8, 11] :
+    score >= 1100 ? [ 6,  9] :
+    score >= 700  ? [ 4,  7] :
+    score >= 300  ? [ 2,  5] :
+                    [ 1,  3];
+  return lo + Math.floor(Math.random() * (hi - lo + 1));
 }
 
 // ── 結果画面 ──────────────────────────────────────────
@@ -620,7 +640,8 @@ function showResult(score, avgWpm, avgAcc) {
 
   const picNum = picForScore(score);
   const picEl  = document.getElementById('scorePic');
-  picEl.src    = `/avatars/pic${picNum}.jpg`;
+  const picExt = picNum === 13 ? 'png' : picNum >= 11 ? 'jpeg' : 'jpg';
+  picEl.src    = `/avatars/pic${picNum}.${picExt}`;
   picEl.alt    = `スコアキャラクター lv${picNum}`;
   const info = PIC_INFO[picNum] || PIC_INFO[1];
   document.getElementById('picTitle').textContent = `「${info.title}」`;

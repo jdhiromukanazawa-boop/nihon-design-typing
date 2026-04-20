@@ -660,6 +660,16 @@ html, body {
 }
 .stars-filled { color: #f59e0b; }
 .stars-empty  { color: var(--border); }
+.rarity-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  vertical-align: middle;
+}
 
 /* ランクバッジ */
 .my-rank-badge {
