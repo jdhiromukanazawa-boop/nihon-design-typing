@@ -189,4 +189,33 @@ async function eveningReport(todayResults) {
   await postMessage(msg);
 }
 
-module.exports = { morningReport, intermediateReport, resultReport, eveningReport, postMessage };
+// ── ランキング変動通知（リアルタイム）─────────────────
+async function rankChangeNotify(type, entry, prev, totalCount) {
+  let msg;
+  if (type === 'first') {
+    const prevLine = prev ? `（前の1位：${prev.nickname} ${prev.score}pt）` : '';
+    msg = [
+      `[info][title]🥇 ランキング1位が更新されました！[/title]`,
+      `${entry.nickname}（${entry.name}）が ${entry.score}pt でトップに立った！`,
+      prevLine,
+      `現在 ${totalCount} 人が参戦中。王座を守れるか？`,
+      '[hr]',
+      `▶ 今すぐ挑戦 → ${GAME_URL}`,
+      '[/info]',
+    ].filter(Boolean).join('\n');
+  } else {
+    const prevLine = prev ? `（前の最下位：${prev.nickname} ${prev.score}pt）` : '';
+    msg = [
+      `[info][title]🔻 ランキング最下位が更新されました[/title]`,
+      `${entry.nickname}（${entry.name}）が ${entry.score}pt で最下位に…`,
+      prevLine,
+      `全 ${totalCount} 人中 ${totalCount} 位。逆転を狙え！`,
+      '[hr]',
+      `▶ 今すぐリベンジ → ${GAME_URL}`,
+      '[/info]',
+    ].filter(Boolean).join('\n');
+  }
+  await postMessage(msg);
+}
+
+module.exports = { morningReport, intermediateReport, resultReport, eveningReport, rankChangeNotify, postMessage };

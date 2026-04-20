@@ -177,11 +177,28 @@ io.on('connection', (socket) => {
       newScore:  rounded.score,
     });
 
+    // 更新前の1位・最下位を記録
+    const prevFirst = dailyRecords.length > 0 ? dailyRecords[0] : null;
+    const prevLast  = dailyRecords.length > 0 ? dailyRecords[dailyRecords.length - 1] : null;
+
     dailyRecords.push(rounded);
     dailyRecords.sort((a, b) => b.score - a.score);
     if (dailyRecords.length > 30) dailyRecords = dailyRecords.slice(0, 30);
     io.emit('leaderboardUpdate', dailyRecords);
     console.log(`[Score] ${rounded.nickname} ${rounded.score}pt (${rounded.avgWpm}WPM / ${rounded.avgAccuracy}%)`);
+
+    // 1位・最下位変動通知（非同期・エラー無視）
+    if (reportEnabled()) {
+      const newFirst = dailyRecords[0];
+      const newLast  = dailyRecords[dailyRecords.length - 1];
+      const isNewFirst = !prevFirst || newFirst.score > prevFirst.score;
+      const isNewLast  = dailyRecords.length > 1 && newLast.score !== (prevLast ? prevLast.score : null) && newLast.playerId === rounded.playerId;
+      if (isNewFirst) {
+        report.rankChangeNotify('first', newFirst, prevFirst, dailyRecords.length).catch(() => {});
+      } else if (isNewLast) {
+        report.rankChangeNotify('last', newLast, prevLast, dailyRecords.length).catch(() => {});
+      }
+    }
   });
 
   socket.on('disconnect', () => console.log(`切断: ${socket.id}`));
