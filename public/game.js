@@ -532,7 +532,7 @@ function finishGame() {
   const avgAcc = done.length > 0 ? Math.round(done.reduce((s, r) => s + r.acc, 0) / done.length) : 0;
   const score  = done.reduce((s, r) => s + Math.floor(r.wpm * (r.acc / 100)), 0);
 
-  socket.emit('submitScore', { playerId: myPlayer.id, score, avgWpm, avgAccuracy: avgAcc });
+  socket.emit('submitScore', { playerId: myPlayer.id, nickname: myPlayer.nickname, score, avgWpm, avgAccuracy: avgAcc });
   showResult(score, avgWpm, avgAcc);
 }
 

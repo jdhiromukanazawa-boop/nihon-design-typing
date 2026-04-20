@@ -136,7 +136,7 @@ io.on('connection', (socket) => {
     socket.emit('gameData', { texts: pickTexts() });
   });
 
-  socket.on('submitScore', async ({ playerId, score, avgWpm, avgAccuracy }) => {
+  socket.on('submitScore', async ({ playerId, nickname: clientNickname, score, avgWpm, avgAccuracy }) => {
     const playerDef = PLAYERS.find(p => p.id === playerId);
     if (!playerDef) return;
 
@@ -144,10 +144,14 @@ io.on('connection', (socket) => {
     let prevBest = null;
     try { prevBest = await getPlayerBest(playerId); } catch (e) { /* 無視 */ }
 
+    // ゲストは入力された名前を優先、それ以外は固定値
+    const nickname = (playerId === 'guest' && clientNickname) ? clientNickname : playerDef.nickname;
+    const name     = (playerId === 'guest' && clientNickname) ? clientNickname : playerDef.name;
+
     const rounded = {
       playerId,
-      name:        playerDef.name,
-      nickname:    playerDef.nickname,
+      name,
+      nickname,
       color:       playerDef.color,
       score:       Math.round(score),
       avgWpm:      Math.round(avgWpm),
