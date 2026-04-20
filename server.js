@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
 const { PLAYERS } = require('./texts');
-const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores, getTodayScores, getYesterdayScores } = require('./db');
+const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getTopScores, getTodayScores, getYesterdayScores } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -110,13 +110,19 @@ app.get('/api/admin/scores', adminAuth, (req, res) => {
   res.json(dailyRecords);
 });
 
-app.delete('/api/admin/scores/:idx', adminAuth, (req, res) => {
+app.delete('/api/admin/scores/:idx', adminAuth, async (req, res) => {
   const idx = parseInt(req.params.idx);
   if (isNaN(idx) || idx < 0 || idx >= dailyRecords.length) {
     return res.status(400).json({ error: '無効なインデックス' });
   }
+  const record = dailyRecords[idx];
   dailyRecords.splice(idx, 1);
   io.emit('leaderboardUpdate', dailyRecords);
+
+  // Supabase からも削除
+  if (record.id) {
+    deleteScoreById(record.id).catch(e => console.error('[Score] DB削除エラー:', e.message));
+  }
   res.json({ ok: true });
 });
 
@@ -148,14 +154,19 @@ io.on('connection', (socket) => {
       }),
     };
 
+    // Supabase に保存してIDを取得し、dailyRecords に紐付ける
+    try {
+      const dbId = await saveScore(rounded);
+      rounded.id = dbId;
+    } catch (e) {
+      console.error('[Score] 保存エラー:', e.message);
+    }
+
     dailyRecords.push(rounded);
     dailyRecords.sort((a, b) => b.score - a.score);
     if (dailyRecords.length > 30) dailyRecords = dailyRecords.slice(0, 30);
     io.emit('leaderboardUpdate', dailyRecords);
     console.log(`[Score] ${rounded.nickname} ${rounded.score}pt (${rounded.avgWpm}WPM / ${rounded.avgAccuracy}%)`);
-
-    // Supabase に永続保存（非同期・失敗しても続行）
-    saveScore(rounded).catch(e => console.error('[Score] 保存エラー:', e.message));
   });
 
   socket.on('disconnect', () => console.log(`切断: ${socket.id}`));

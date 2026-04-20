@@ -85,9 +85,20 @@ async function initIfEmpty() {
 }
 
 async function saveScore({ playerId, name, nickname, color, score, avgWpm, avgAccuracy }) {
+  const { data, error } = await supabase
+    .from('scores')
+    .insert([{ player_id: playerId, name, nickname, color, score, avg_wpm: avgWpm, avg_accuracy: avgAccuracy }])
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data.id; // Supabase の行ID を返す
+}
+
+async function deleteScoreById(id) {
   const { error } = await supabase
     .from('scores')
-    .insert([{ player_id: playerId, name, nickname, color, score, avg_wpm: avgWpm, avg_accuracy: avgAccuracy }]);
+    .delete()
+    .eq('id', id);
   if (error) throw error;
 }
 
@@ -172,4 +183,4 @@ async function getTodayScores(limit = 30) {
   }));
 }
 
-module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores, getTodayScores, getYesterdayScores };
+module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getTopScores, getTodayScores, getYesterdayScores };
