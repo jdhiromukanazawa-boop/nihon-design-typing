@@ -49,7 +49,7 @@ const TEXTS = [
   T('量より質よりスピード',             'ryou yori shitsu yori supi-do',           '社長の名言'),
   T('選ぶ権利はまだない',               'erabu kenri ha mada nai',                 '社長の名言'),
   T('大変って大きく変わる',             'taihen tte okiku kawaru',                 '社長の名言'),
-  T('気付いても大抵やらない',           'kizuite mo taitei yaranai',               '社長の名言'),
+  T('気付いても大抵やらない',           'kiduite mo taitei yaranai',               '社長の名言'),
   T('先輩の現在は後輩の将来',           'senpai no genzai ha kouhai no shourai',   '社長の名言'),
   T('結果出してから言わないとダサい',   'kekka dashite kara iwa naito dasai',      '社長の名言'),
   T('疲れた凡人ならとっくに倒れてる',   'tsukareta bonjin nara tokkuni taoreteru', '社長の名言'),
