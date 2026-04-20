@@ -38,7 +38,7 @@ function randomQuote() {
   return MORNING_QUOTES[Math.floor(Math.random() * MORNING_QUOTES.length)];
 }
 
-// Chatworkに投稿
+// Chatworkに投稿（[toall] を自動付与）
 async function postMessage(body) {
   if (!TOKEN || !ROOM_ID) {
     console.warn('[Report] 環境変数未設定');
@@ -51,7 +51,7 @@ async function postMessage(body) {
         'X-ChatWorkToken': TOKEN,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: `body=${encodeURIComponent(body)}`,
+      body: `body=${encodeURIComponent('[toall]\n' + body)}`,
     });
     const json = await res.json();
     console.log(`[Report] 投稿完了 message_id=${json.message_id}`);
@@ -60,6 +60,12 @@ async function postMessage(body) {
     console.error('[Report] エラー:', e.message);
     return null;
   }
+}
+
+// 約30%の確率でゲスト案内を返す
+function maybeGuestTip() {
+  if (Math.random() >= 0.3) return '';
+  return '\n💡 先輩たちもぜひやってみてね。ゲストでプレイする時は「ゲスト」を選んでね。';
 }
 
 const GAME_URL = 'https://nihon-design-typing.onrender.com/';
@@ -93,7 +99,7 @@ async function morningReport(yesterdayResults) {
     '今日も一日、楽しく成長しましょう！',
     '',
     `🎹 [b]タイピング大会[/b] 随時開催中！`,
-    `　→ ${GAME_URL}`,
+    `　→ ${GAME_URL}` + maybeGuestTip(),
     '[/info]',
   ].join('\n');
   await postMessage(msg);
@@ -146,7 +152,7 @@ async function intermediateReport(todayResults) {
     '',
     rally,
     '',
-    `▶ 今すぐプレイ → ${GAME_URL}`,
+    `▶ 今すぐプレイ → ${GAME_URL}` + maybeGuestTip(),
     '[/info]',
   ].join('\n');
   await postMessage(msg);
@@ -174,7 +180,7 @@ async function eveningReport(todayResults) {
     '',
     `[qt]${randomQuote()}[/qt]`,
     '',
-    `🎹 まだ間に合う！ → ${GAME_URL}`,
+    `🎹 まだ間に合う！ → ${GAME_URL}` + maybeGuestTip(),
     '[/info]',
   ].join('\n');
   await postMessage(msg);
