@@ -663,6 +663,12 @@ html, body {
   font-size: 2rem; font-weight: 900;
   margin-top: 14px; letter-spacing: .06em;
 }
+.my-next-rank {
+  margin-top: 6px;
+  font-size: .92rem; font-weight: 700;
+  color: var(--text-sub);
+  letter-spacing: .03em;
+}
 
 /* 課題フィードバック */
 .my-feedback {

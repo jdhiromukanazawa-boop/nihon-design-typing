@@ -533,18 +533,34 @@ function triggerMissFlash() {
 }
 
 // ── ランク判定 ────────────────────────────────────────
+// { min, label, color } を降順で定義
+const RANK_TABLE = [
+  { min: 4000, label: 'SSS', color: '#ff6b35' },
+  { min: 3000, label: 'SS',  color: '#f59e0b' },
+  { min: 2300, label: 'S+',  color: '#fbbf24' },
+  { min: 1700, label: 'S',   color: '#f59e0b' },
+  { min: 1400, label: 'A+',  color: '#7c3aed' },
+  { min: 1100, label: 'A',   color: '#7c3aed' },
+  { min: 850,  label: 'A-',  color: '#9f67f5' },
+  { min: 650,  label: 'B+',  color: '#06D6A0' },
+  { min: 500,  label: 'B',   color: '#06D6A0' },
+  { min: 370,  label: 'B-',  color: '#34d399' },
+  { min: 250,  label: 'C',   color: '#00B4D8' },
+  { min: 150,  label: 'D',   color: '#6b7280' },
+  { min: 80,   label: 'E',   color: '#9CA3AF' },
+  { min: 30,   label: 'F',   color: '#9CA3AF' },
+  { min: 0,    label: 'Z',   color: '#ef4444' },
+];
+
 function getRank(score) {
-  if (score >= 2000) return { label: 'S ランク',  color: '#f59e0b' };
-  if (score >= 1600) return { label: 'A+ ランク', color: '#7c3aed' };
-  if (score >= 1300) return { label: 'A ランク',  color: '#7c3aed' };
-  if (score >= 1000) return { label: 'A- ランク', color: '#9f67f5' };
-  if (score >= 700)  return { label: 'B ランク',  color: '#06D6A0' };
-  if (score >= 500)  return { label: 'B- ランク', color: '#06D6A0' };
-  if (score >= 350)  return { label: 'C ランク',  color: '#00B4D8' };
-  if (score >= 200)  return { label: 'D ランク',  color: '#6b7280' };
-  if (score >= 100)  return { label: 'E ランク',  color: '#9CA3AF' };
-  if (score >= 50)   return { label: 'F ランク',  color: '#9CA3AF' };
-  return                     { label: 'Z ランク',  color: '#ef4444' };
+  const idx = RANK_TABLE.findIndex(r => score >= r.min);
+  const cur  = RANK_TABLE[idx];
+  const prev = RANK_TABLE[idx - 1]; // 一つ上のランク（なければ最高位）
+  return {
+    label: cur.label + ' ランク',
+    color: cur.color,
+    next:  prev ? { label: prev.label + ' ランク', need: prev.min - score } : null,
+  };
 }
 
 // ── 課題フィードバック ────────────────────────────────
@@ -601,6 +617,17 @@ function showResult(score, avgWpm, avgAcc) {
   const rankEl = document.getElementById('resultRank');
   rankEl.textContent = rank.label;
   rankEl.style.color = rank.color;
+
+  const nextEl = document.getElementById('resultNextRank');
+  if (nextEl) {
+    if (rank.next) {
+      nextEl.textContent = `🎯 次は ${rank.next.label} まであと ${rank.next.need} pt！`;
+      nextEl.style.display = 'block';
+    } else {
+      nextEl.textContent = '👑 最高ランク達成！伝説入りおめでとう！';
+      nextEl.style.display = 'block';
+    }
+  }
 
   const feedbackItems = getFeedback(avgAcc, avgWpm);
   document.getElementById('resultFeedback').innerHTML =
