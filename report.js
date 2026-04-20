@@ -189,6 +189,23 @@ async function eveningReport(todayResults) {
   await postMessage(msg);
 }
 
+// ── 固定プレイヤー ハイスコア更新通知 ────────────────
+async function personalBestNotify(entry, prevBest) {
+  const isFirst = prevBest === null || prevBest === 0;
+  const diff    = isFirst ? '' : `（+${entry.score - prevBest}pt 向上！）`;
+  const prevLine = isFirst ? '初記録達成！' : `前の記録：${prevBest}pt`;
+  const msg = [
+    `[info][title]🔥 ハイスコア更新！ ${entry.nickname}（${entry.name}）[/title]`,
+    `${entry.score}pt ${diff}`,
+    prevLine,
+    `WPM：${entry.avgWpm}　正確率：${entry.avgAccuracy}%`,
+    '[hr]',
+    `▶ あなたも挑戦 → ${GAME_URL}`,
+    '[/info]',
+  ].join('\n');
+  await postMessage(msg);
+}
+
 // ── ランキング変動通知（リアルタイム）─────────────────
 async function rankChangeNotify(type, entry, prev, totalCount) {
   let msg;
@@ -218,4 +235,4 @@ async function rankChangeNotify(type, entry, prev, totalCount) {
   await postMessage(msg);
 }
 
-module.exports = { morningReport, intermediateReport, resultReport, eveningReport, rankChangeNotify, postMessage };
+module.exports = { morningReport, intermediateReport, resultReport, eveningReport, personalBestNotify, rankChangeNotify, postMessage };

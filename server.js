@@ -187,16 +187,25 @@ io.on('connection', (socket) => {
     io.emit('leaderboardUpdate', dailyRecords);
     console.log(`[Score] ${rounded.nickname} ${rounded.score}pt (${rounded.avgWpm}WPM / ${rounded.avgAccuracy}%)`);
 
-    // 1位・最下位変動通知（非同期・エラー無視）
+    // 各種Chatwork通知（非同期・エラー無視）
     if (reportEnabled()) {
-      const newFirst = dailyRecords[0];
-      const newLast  = dailyRecords[dailyRecords.length - 1];
+      const newFirst   = dailyRecords[0];
+      const newLast    = dailyRecords[dailyRecords.length - 1];
       const isNewFirst = !prevFirst || newFirst.score > prevFirst.score;
       const isNewLast  = dailyRecords.length > 1 && newLast.score !== (prevLast ? prevLast.score : null) && newLast.playerId === rounded.playerId;
-      if (isNewFirst) {
-        report.rankChangeNotify('first', newFirst, prevFirst, dailyRecords.length).catch(() => {});
-      } else if (isNewLast) {
-        report.rankChangeNotify('last', newLast, prevLast, dailyRecords.length).catch(() => {});
+      const isNewBest  = prevBest === null || rounded.score > prevBest;
+
+      // 固定4人のハイスコア更新通知
+      if (isNewBest && playerId !== 'guest') {
+        report.personalBestNotify(rounded, prevBest).catch(() => {});
+      }
+      // 1位・最下位変動通知（ハイスコア通知と重複しないよう else で）
+      if (!isNewBest || playerId === 'guest') {
+        if (isNewFirst) {
+          report.rankChangeNotify('first', newFirst, prevFirst, dailyRecords.length).catch(() => {});
+        } else if (isNewLast) {
+          report.rankChangeNotify('last', newLast, prevLast, dailyRecords.length).catch(() => {});
+        }
       }
     }
   });
