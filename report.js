@@ -68,37 +68,42 @@ function maybeGuestTip() {
   return '\n💡 先輩たちもぜひやってみてね。ゲストでプレイする時は「ゲスト」を選んでね。';
 }
 
+// 順位ラベル
+function rankLabel(i) {
+  return ['🥇','🥈','🥉'][i] || `${i + 1}位`;
+}
+
 const GAME_URL = 'https://nihon-design-typing.onrender.com/';
 
 // ── 朝のレポート（8:00）+ 昨日の最終結果 ──────────────
 async function morningReport(yesterdayResults) {
   let yesterdaySection;
   if (yesterdayResults && yesterdayResults.length > 0) {
-    const medal = ['🥇','🥈','🥉'];
     const lines = yesterdayResults.slice(0, 5).map((p, i) =>
-      `${medal[i] || `${i+1}位`}　${p.nickname}（${p.name}）　${p.score}pt`
+      `${rankLabel(i)}　${p.nickname}（${p.name}）　${p.score}pt`
     );
     const winner = yesterdayResults[0];
     yesterdaySection = [
-      '📊 [b]昨日の最終ランキング[/b]',
+      '昨日の最終ランキング',
       ...lines,
       '',
-      `昨日の優勝は [b]${winner.nickname}（${winner.name}）[/b]！${winner.score}pt 🏆`,
+      `昨日の優勝は ${winner.nickname}（${winner.name}）！${winner.score}pt 🏆`,
       '今日こそ王座を奪いに行こう！',
     ].join('\n');
   } else {
     yesterdaySection = '昨日のプレイ記録はありません。\n今日が初日！記録を作ろう！🏁';
   }
 
+  const quote = randomQuote();
   const msg = [
     `[info][title]🌅 おはようございます！ ${todayJP()}[/title]`,
     yesterdaySection,
-    '',
-    `[qt]${randomQuote()}[/qt]`,
-    '',
+    '[hr]',
+    `「${quote}」`,
+    '[hr]',
     '今日も一日、楽しく成長しましょう！',
     '',
-    `🎹 [b]タイピング大会[/b] 随時開催中！`,
+    `🎹 タイピング大会 随時開催中！`,
     `　→ ${GAME_URL}` + maybeGuestTip(),
     '[/info]',
   ].join('\n');
@@ -108,16 +113,15 @@ async function morningReport(yesterdayResults) {
 // ── 大会結果レポート（ゲーム終了後・または18:00定時）──
 async function resultReport(scoreboard) {
   if (!scoreboard || scoreboard.length === 0) return;
-  const medal = ['🥇','🥈','🥉','4️⃣'];
   const lines = scoreboard.map((p, i) =>
-    `${medal[i]||'　'} ${i+1}位　${p.nickname}（${p.name}）　${p.score}pt`
+    `${rankLabel(i)}　${p.nickname}（${p.name}）　${p.score}pt`
   );
   const winner = scoreboard[0];
   const msg = [
     `[info][title]🎹 タイピング大会 結果発表！[/title]`,
     ...lines,
     '',
-    `本日の優勝は [b]${winner.nickname}（${winner.name}）[/b] ！おめでとう！🎉`,
+    `本日の優勝は ${winner.nickname}（${winner.name}）！おめでとう！🎉`,
     '[/info]',
   ].join('\n');
   await postMessage(msg);
@@ -138,18 +142,17 @@ async function intermediateReport(todayResults) {
   const rally = RALLY_MESSAGES[Math.floor(Math.random() * RALLY_MESSAGES.length)];
   let content;
   if (todayResults && todayResults.length > 0) {
-    const medal = ['🥇','🥈','🥉'];
     const lines = todayResults.slice(0, 5).map((p, i) =>
-      `${medal[i] || `${i+1}位`}　${p.nickname}（${p.name}）　${p.score}pt`
+      `${rankLabel(i)}　${p.nickname}（${p.name}）　${p.score}pt`
     );
-    content = ['📊 現在のランキング：', ...lines].join('\n');
+    content = ['現在のランキング：', ...lines].join('\n');
   } else {
     content = 'まだ誰も挑戦していません。\n最初のプレイヤーになろう！🏆';
   }
   const msg = [
     `[info][title]🎹 タイピング大会 中間速報！ ${todayJP()}[/title]`,
     content,
-    '',
+    '[hr]',
     rally,
     '',
     `▶ 今すぐプレイ → ${GAME_URL}` + maybeGuestTip(),
@@ -162,9 +165,8 @@ async function intermediateReport(todayResults) {
 async function eveningReport(todayResults) {
   let content;
   if (todayResults && todayResults.length > 0) {
-    const medal = ['🥇','🥈','🥉','4️⃣'];
     const lines = todayResults.map((p, i) =>
-      `${medal[i]||'　'} ${p.nickname}　${p.score}pt`
+      `${rankLabel(i)}　${p.nickname}（${p.name}）　${p.score}pt`
     );
     content = [
       '本日の大会結果：',
@@ -174,12 +176,13 @@ async function eveningReport(todayResults) {
     content = '本日はまだ大会が行われていません。\n明日もチャレンジしよう！💪';
   }
 
+  const quote = randomQuote();
   const msg = [
     `[info][title]🌆 お疲れ様です！ ${todayJP()}[/title]`,
     content,
-    '',
-    `[qt]${randomQuote()}[/qt]`,
-    '',
+    '[hr]',
+    `「${quote}」`,
+    '[hr]',
     `🎹 まだ間に合う！ → ${GAME_URL}` + maybeGuestTip(),
     '[/info]',
   ].join('\n');
