@@ -95,6 +95,39 @@ async function resultReport(scoreboard) {
   await postMessage(msg);
 }
 
+// ── 中間速報（10:00・14:00）─────────────────────────
+const RALLY_MESSAGES = [
+  '🔥 まだまだ逆転できる！今すぐ打ち込んでランキングを塗り替えろ！',
+  '⚡ 差はわずか！本気を出せば一気にトップへ行ける！',
+  '💥 昨日の自分を超えるチャンス！スコアの更新を狙え！',
+  '🎯 指が温まってきた今が勝負！ライバルを追い越せ！',
+  '🚀 現在トップのスコアを超えたら伝説入り確定！挑戦しよう！',
+  '😤 まだ諦めていない人が最後に笑う！もう一回！',
+  '⏰ 時間はまだある！集中して打てば絶対に更新できる！',
+];
+
+async function intermediateReport(todayResults) {
+  const rally = RALLY_MESSAGES[Math.floor(Math.random() * RALLY_MESSAGES.length)];
+  let content;
+  if (todayResults && todayResults.length > 0) {
+    const medal = ['🥇','🥈','🥉'];
+    const lines = todayResults.slice(0, 5).map((p, i) =>
+      `${medal[i] || `${i+1}位`}　${p.nickname}（${p.name}）　${p.score}pt`
+    );
+    content = ['📊 現在のランキング：', ...lines].join('\n');
+  } else {
+    content = 'まだ誰も挑戦していません。\n最初のプレイヤーになろう！🏆';
+  }
+  const msg = [
+    `[info][title]🎹 タイピング大会 中間速報！ ${todayJP()}[/title]`,
+    content,
+    '',
+    rally,
+    '[/info]',
+  ].join('\n');
+  await postMessage(msg);
+}
+
 // ── 夜のサマリー（18:00）─────────────────────────────
 async function eveningReport(todayResults) {
   let content;
@@ -121,4 +154,4 @@ async function eveningReport(todayResults) {
   await postMessage(msg);
 }
 
-module.exports = { morningReport, resultReport, eveningReport, postMessage };
+module.exports = { morningReport, intermediateReport, resultReport, eveningReport, postMessage };

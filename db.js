@@ -114,4 +114,35 @@ async function getTopScores(limit = 30) {
   }));
 }
 
-module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores };
+// JST の今日0時以降のスコアを取得（デプロイ後の復元用）
+async function getTodayScores(limit = 30) {
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const now = new Date();
+  const jstToday = new Date(now.getTime() + jstOffset);
+  jstToday.setUTCHours(0, 0, 0, 0);
+  const todayStartUtc = new Date(jstToday.getTime() - jstOffset);
+
+  const { data, error } = await supabase
+    .from('scores')
+    .select('*')
+    .gte('achieved_at', todayStartUtc.toISOString())
+    .order('score', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data.map(r => ({
+    id:          r.id,
+    playerId:    r.player_id,
+    name:        r.name,
+    nickname:    r.nickname,
+    color:       r.color,
+    score:       r.score,
+    avgWpm:      r.avg_wpm,
+    avgAccuracy: r.avg_accuracy,
+    timestamp:   new Date(r.achieved_at).toLocaleString('ja-JP', {
+      timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    }),
+  }));
+}
+
+module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores, getTodayScores };

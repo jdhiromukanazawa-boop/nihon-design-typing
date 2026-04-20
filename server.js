@@ -4,7 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
 const { PLAYERS } = require('./texts');
-const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores } = require('./db');
+const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, getTopScores, getTodayScores } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -15,7 +15,7 @@ app.use(express.static('public', { extensions: ['html'] }));
 app.use(express.json());
 
 const TEXTS_PER_GAME = 20;
-const REPORT_START = new Date('2026-04-21T00:00:00+09:00');
+const REPORT_START = new Date('2026-04-20T00:00:00+09:00');
 const ADMIN_PASSWORD = 'kanazawa';
 
 // 今日のスコア（毎日0時にリセット）
@@ -175,6 +175,20 @@ cron.schedule('0 9 * * *', () => {
   report.morningReport();
 }, { timezone: 'Asia/Tokyo' });
 
+// 中間速報（10:00 JST）
+cron.schedule('0 10 * * *', () => {
+  if (!reportEnabled()) return;
+  console.log('[Cron] 中間速報 10:00');
+  report.intermediateReport(dailyRecords);
+}, { timezone: 'Asia/Tokyo' });
+
+// 中間速報（14:00 JST）
+cron.schedule('0 14 * * *', () => {
+  if (!reportEnabled()) return;
+  console.log('[Cron] 中間速報 14:00');
+  report.intermediateReport(dailyRecords);
+}, { timezone: 'Asia/Tokyo' });
+
 // 夕方ランキング（18:00 JST）
 cron.schedule('0 18 * * *', () => {
   if (!reportEnabled()) return;
@@ -190,6 +204,8 @@ const PORT = process.env.PORT || 3000;
     await initIfEmpty();
     questionsCache = await getQuestions();
     console.log(`[DB] ${questionsCache.length}件の問題を読み込みました`);
+    dailyRecords = await getTodayScores();
+    console.log(`[DB] 本日のスコア ${dailyRecords.length}件 を復元しました`);
   } catch (e) {
     console.error('[DB] 接続エラー:', e.message);
     process.exit(1);
