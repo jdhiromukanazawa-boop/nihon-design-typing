@@ -400,6 +400,9 @@ html, body {
   color: var(--muted); letter-spacing: .04em;
   border-top: 1px solid var(--border);
   padding-top: 10px;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* input card */

@@ -133,10 +133,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // ゲーム画面をクリックしたら入力欄にフォーカス（ブラウザが自動フォーカスを
 // ブロックした場合でもタイピングできるように）
 function setupGameScreenFocus() {
-  document.getElementById('screen-game').addEventListener('click', () => {
-    const input = document.getElementById('typingInput');
-    if (!input.disabled) input.focus();
-  });
+  // クリックしても input にフォーカスしない（Windows IME 対策）
 }
 
 function preloadImages() {
@@ -307,13 +304,8 @@ function showText(idx) {
   displayedInput = '';
   missedKeyCount = {};
 
-  const input = document.getElementById('typingInput');
-  input.value    = '';
-  input.disabled = false;
-  input.focus();
-  requestAnimationFrame(() => input.focus()); // カウントダウン後のフォーカスブロック対策
-  input.onkeydown = onKeydown;
-  input.oninput   = null;
+  // hidden input は使わない（Windows IME 対策）
+  document.addEventListener('keydown', onKeydown);
 
   renderCharPreview(0, false);
   highlightNextKey();
@@ -364,6 +356,8 @@ function romajiCandidates(exp, pos) {
 
 // ── キーボード入力（char-by-char）────────────────────
 function onKeydown(e) {
+  // ゲーム画面が表示中のときだけ処理
+  if (!document.getElementById('screen-game').classList.contains('active')) return;
   if (inputDone) return;
 
   // Backspace/Delete は無効
@@ -488,9 +482,7 @@ function completeText(wpm, acc, completed) {
   inputDone = true;
   stopTimer();
   document.querySelectorAll('.kb-key').forEach(k => k.classList.remove('kb-active', 'kb-pressed'));
-  const input = document.getElementById('typingInput');
-  input.disabled = true;
-  input.oninput  = null;
+  document.removeEventListener('keydown', onKeydown);
 
   textResults.push({ wpm, acc, completed });
 
