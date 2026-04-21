@@ -179,20 +179,22 @@ async function getTodayScores(limit = 30) {
     .order('score', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return data.map(r => ({
-    id:          r.id,
-    playerId:    r.player_id,
-    name:        r.name,
-    nickname:    r.nickname,
-    color:       r.color,
-    score:       r.score,
-    avgWpm:      r.avg_wpm,
-    avgAccuracy: r.avg_accuracy,
-    timestamp:   new Date(r.achieved_at).toLocaleString('ja-JP', {
-      timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    }),
-  }));
+  return data
+    .filter(r => !(r.player_id === 'guest' && (!r.nickname || r.nickname === 'ゲスト')))
+    .map(r => ({
+      id:          r.id,
+      playerId:    r.player_id,
+      name:        r.name,
+      nickname:    r.nickname,
+      color:       r.color,
+      score:       r.score,
+      avgWpm:      r.avg_wpm,
+      avgAccuracy: r.avg_accuracy,
+      timestamp:   new Date(r.achieved_at).toLocaleString('ja-JP', {
+        timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }),
+    }));
 }
 
 module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getPlayerBest, getTopScores, getTodayScores, getYesterdayScores };
