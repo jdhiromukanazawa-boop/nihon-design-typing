@@ -144,15 +144,11 @@ io.on('connection', (socket) => {
     let prevBest = null;
     try { prevBest = await getPlayerBest(playerId); } catch (e) { /* 無視 */ }
 
-    // ゲストは固有の名前が必須（デフォルト'ゲスト'・未入力は拒否）
-    const customName = (clientNickname && clientNickname.trim() && clientNickname !== 'ゲスト')
+    // ゲストは入力された名前を使用（未入力・デフォルトの場合は'ゲスト'）
+    const customName = (playerId === 'guest' && clientNickname && clientNickname.trim() && clientNickname !== 'ゲスト')
       ? clientNickname.trim() : null;
-    if (playerId === 'guest' && !customName) {
-      console.warn('[Score] ゲストの名前未入力のためスキップ');
-      return;
-    }
-    const nickname = (playerId === 'guest') ? customName : playerDef.nickname;
-    const name     = (playerId === 'guest') ? customName : playerDef.name;
+    const nickname = (playerId === 'guest' && customName) ? customName : playerDef.nickname;
+    const name     = (playerId === 'guest' && customName) ? customName : playerDef.name;
 
     const rounded = {
       playerId,
