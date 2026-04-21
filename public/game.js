@@ -676,8 +676,15 @@ function showResult(score, avgWpm, avgAcc) {
   showScreen('result');
 
   document.getElementById('replayBtn').onclick = () => {
-    document.getElementById('startBtn').disabled = false;
-    document.getElementById('startHint').style.display = 'block';
+    if (myPlayer && myPlayer.id === 'guest') {
+      // ゲストは名前を毎回入力させる
+      document.getElementById('guestNameInput').value = '';
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('startHint').style.display = 'none';
+    } else {
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('startHint').style.display = 'block';
+    }
     showScreen('lobby');
   };
 }

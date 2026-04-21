@@ -144,9 +144,10 @@ io.on('connection', (socket) => {
     let prevBest = null;
     try { prevBest = await getPlayerBest(playerId); } catch (e) { /* 無視 */ }
 
-    // ゲストは入力された名前を優先、それ以外は固定値
-    const nickname = (playerId === 'guest' && clientNickname) ? clientNickname : playerDef.nickname;
-    const name     = (playerId === 'guest' && clientNickname) ? clientNickname : playerDef.name;
+    // ゲストは入力された名前を優先（デフォルト'ゲスト'は除外）
+    const customName = (clientNickname && clientNickname !== 'ゲスト') ? clientNickname : null;
+    const nickname = (playerId === 'guest' && customName) ? customName : playerDef.nickname;
+    const name     = (playerId === 'guest' && customName) ? customName : playerDef.name;
 
     const rounded = {
       playerId,
