@@ -131,12 +131,18 @@ io.on('connection', (socket) => {
   console.log(`接続: ${socket.id}`);
   socket.emit('leaderboardUpdate', dailyRecords);
 
-  socket.on('startGame', ({ playerId }) => {
+  socket.on('startGame', ({ playerId, guestName }) => {
     if (!PLAYERS.find(p => p.id === playerId)) return;
+    // ゲスト名をセッションに保存（submitScoreで使用）
+    if (playerId === 'guest' && guestName && guestName.trim() && guestName !== 'ゲスト') {
+      socket.data.guestName = guestName.trim();
+    } else {
+      socket.data.guestName = null;
+    }
     socket.emit('gameData', { texts: pickTexts() });
   });
 
-  socket.on('submitScore', async ({ playerId, nickname: clientNickname, score, avgWpm, avgAccuracy }) => {
+  socket.on('submitScore', async ({ playerId, score, avgWpm, avgAccuracy }) => {
     const playerDef = PLAYERS.find(p => p.id === playerId);
     if (!playerDef) return;
 
@@ -144,11 +150,10 @@ io.on('connection', (socket) => {
     let prevBest = null;
     try { prevBest = await getPlayerBest(playerId); } catch (e) { /* 無視 */ }
 
-    // ゲストは入力された名前を使用（未入力・デフォルトの場合は'ゲスト'）
-    const customName = (playerId === 'guest' && clientNickname && clientNickname.trim() && clientNickname !== 'ゲスト')
-      ? clientNickname.trim() : null;
-    const nickname = (playerId === 'guest' && customName) ? customName : playerDef.nickname;
-    const name     = (playerId === 'guest' && customName) ? customName : playerDef.name;
+    // ゲスト名はstartGame時にセッションへ保存した値を使用
+    const sessionGuestName = socket.data.guestName || null;
+    const nickname = (playerId === 'guest' && sessionGuestName) ? sessionGuestName : playerDef.nickname;
+    const name     = (playerId === 'guest' && sessionGuestName) ? sessionGuestName : playerDef.name;
 
     const rounded = {
       playerId,

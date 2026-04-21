@@ -259,14 +259,16 @@ function setupSpaceStart() {
 function requestStart() {
   if (!myPlayer) return;
   ensureAudio();
+  let guestName = null;
   if (myPlayer.id === 'guest') {
-    const name = document.getElementById('guestNameInput').value.trim();
-    if (!name) return; // 名前未入力は弾く
-    myPlayer = { ...myPlayer, nickname: name, name: name };
+    guestName = document.getElementById('guestNameInput').value.trim();
+    if (!guestName) return; // 名前未入力は弾く
+    myPlayer = { ...myPlayer, nickname: guestName, name: guestName };
   }
   document.getElementById('startBtn').disabled = true;
   document.getElementById('startHint').style.display = 'none';
-  socket.emit('startGame', { playerId: myPlayer.id });
+  // ゲスト名はstartGameで送信し、サーバーがセッションに保持する
+  socket.emit('startGame', { playerId: myPlayer.id, guestName });
 }
 
 // ── カウントダウン ────────────────────────────────────
