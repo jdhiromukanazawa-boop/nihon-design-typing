@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -10,6 +11,17 @@ const report = require('./report');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+
+// index.html と game.js はキャッシュさせない（常に最新を配信）
+const noCache = (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+};
+app.get('/', noCache, (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/index.html', noCache, (req, res) => res.sendFile(path.join(__dirname, 'public/index.html')));
+app.get('/game.js', noCache, (req, res) => res.sendFile(path.join(__dirname, 'public/game.js')));
 
 app.use(express.static('public', { extensions: ['html'] }));
 app.use(express.json());
