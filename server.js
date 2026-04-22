@@ -154,7 +154,7 @@ io.on('connection', (socket) => {
     socket.emit('gameData', { texts: pickTexts() });
   });
 
-  socket.on('submitScore', async ({ playerId, score, avgWpm, avgAccuracy }) => {
+  socket.on('submitScore', async ({ playerId, nickname: clientNickname, score, avgWpm, avgAccuracy }) => {
     const playerDef = PLAYERS.find(p => p.id === playerId);
     if (!playerDef) return;
 
@@ -162,10 +162,13 @@ io.on('connection', (socket) => {
     let prevBest = null;
     try { prevBest = await getPlayerBest(playerId); } catch (e) { /* 無視 */ }
 
-    // ゲスト名はstartGame時にセッションへ保存した値を使用
-    const sessionGuestName = socket.data.guestName || null;
-    const nickname = (playerId === 'guest' && sessionGuestName) ? sessionGuestName : playerDef.nickname;
-    const name     = (playerId === 'guest' && sessionGuestName) ? sessionGuestName : playerDef.name;
+    // ゲスト名: socket.data（startGame時に保存）→ clientNickname の順で取得
+    const validName = (n) => n && n.trim() && n !== 'ゲスト' ? n.trim() : null;
+    const customName = (playerId === 'guest')
+      ? (validName(socket.data.guestName) || validName(clientNickname))
+      : null;
+    const nickname = customName || playerDef.nickname;
+    const name     = customName || playerDef.name;
 
     const rounded = {
       playerId,

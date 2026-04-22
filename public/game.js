@@ -251,6 +251,8 @@ function setupSpaceStart() {
   document.addEventListener('keydown', e => {
     if (e.code !== 'Space') return;
     if (!document.getElementById('screen-lobby').classList.contains('active')) return;
+    // ゲスト名入力欄にフォーカス中はスペースでゲームを開始しない
+    if (document.activeElement === document.getElementById('guestNameInput')) return;
     e.preventDefault();
     if (myPlayer) requestStart();
   });
