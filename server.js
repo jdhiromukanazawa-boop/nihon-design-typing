@@ -5,7 +5,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cron = require('node-cron');
 const { PLAYERS } = require('./texts');
-const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getPlayerBest, getTopScores, getTodayScores, getYesterdayScores } = require('./db');
+const { getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getPlayerBest, getTopScores, getTodayScores, getYesterdayScores, getWeeklyBestScores, getMonthlyBestScores, getPrevMonthBestScores } = require('./db');
 const report = require('./report');
 
 const app = express();
@@ -36,7 +36,9 @@ let dailyRecords = [];
 let questionsCache = [];
 
 function reportEnabled() {
-  return new Date() >= REPORT_START;
+  // 通知一時停止中（再開するときは false → true に戻す）
+  return false;
+  // return new Date() >= REPORT_START;
 }
 
 function pickTexts() {
@@ -273,6 +275,62 @@ cron.schedule('0 18 * * *', () => {
   if (!reportEnabled()) return;
   console.log('[Cron] 夕方レポート');
   report.eveningReport(dailyRecords);
+}, { timezone: 'Asia/Tokyo' });
+
+// 週次ベストスコアランキング（毎週月曜 9:00 JST）
+cron.schedule('0 9 * * 1', async () => {
+  if (!reportEnabled()) return;
+  console.log('[Cron] 週次ランキング');
+  try {
+    const results = await getWeeklyBestScores(10);
+    await report.weeklyRankingReport(results);
+  } catch (e) {
+    console.error('[Cron] 週次ランキングエラー:', e.message);
+  }
+}, { timezone: 'Asia/Tokyo' });
+
+// 月次ベストスコアランキング（毎月1日 9:00 JST）
+cron.schedule('0 9 1 * *', async () => {
+  if (!reportEnabled()) return;
+  console.log('[Cron] 月次ランキング');
+  try {
+    // 月初に実行するので「先月分」を集計
+    const now = new Date();
+    const jstOffset = 9 * 60 * 60 * 1000;
+    const jstNow = new Date(now.getTime() + jstOffset);
+    const y = jstNow.getUTCFullYear();
+    const m = jstNow.getUTCMonth(); // 0-indexed（今月）
+    // 先月の範囲
+    const prevMonthStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));
+    const thisMonthStart = new Date(Date.UTC(y, m, 1, 0, 0, 0));
+    const fromUtc = new Date(prevMonthStart.getTime() - jstOffset);
+    const toUtc   = new Date(thisMonthStart.getTime() - jstOffset);
+    const { getBestScoresForPeriod } = require('./db');
+    // ※ getMonthlyBestScores は「今月分」なので、ここは直接期間指定
+    const { supabase } = require('./db');
+    // 先月のスコアを直接クエリ
+    const { data, error } = await supabase
+      .from('scores')
+      .select('*')
+      .gte('achieved_at', fromUtc.toISOString())
+      .lt('achieved_at', toUtc.toISOString())
+      .order('score', { ascending: false })
+      .limit(500);
+    if (error) throw error;
+    const bestMap = new Map();
+    for (const r of data) {
+      const key = r.player_id === 'guest' ? `guest::${r.nickname}` : r.player_id;
+      const ex = bestMap.get(key);
+      if (!ex || r.score > ex.score) bestMap.set(key, r);
+    }
+    const results = [...bestMap.values()]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10)
+      .map(r => ({ playerId: r.player_id, name: r.name, nickname: r.nickname, score: r.score, avgWpm: r.avg_wpm, avgAccuracy: r.avg_accuracy }));
+    await report.monthlyRankingReport(results);
+  } catch (e) {
+    console.error('[Cron] 月次ランキングエラー:', e.message);
+  }
 }, { timezone: 'Asia/Tokyo' });
 
 // ── 起動 ──────────────────────────────────────────

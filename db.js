@@ -197,4 +197,80 @@ async function getTodayScores(limit = 30) {
     }));
 }
 
-module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getPlayerBest, getTopScores, getTodayScores, getYesterdayScores };
+// 指定期間のプレイヤー別ベストスコアTOP10を返す（週次・月次共通）
+async function getBestScoresForPeriod(fromUtc, toUtc, limit = 10) {
+  const { data, error } = await supabase
+    .from('scores')
+    .select('*')
+    .gte('achieved_at', fromUtc.toISOString())
+    .lt('achieved_at', toUtc.toISOString())
+    .order('score', { ascending: false })
+    .limit(500); // 期間内を全取得して JS 側で集約
+  if (error) throw error;
+
+  // プレイヤー別に最高スコアだけ残す（named: player_id, guest: nickname で識別）
+  const bestMap = new Map();
+  for (const r of data) {
+    const key = r.player_id === 'guest' ? `guest::${r.nickname}` : r.player_id;
+    const existing = bestMap.get(key);
+    if (!existing || r.score > existing.score) bestMap.set(key, r);
+  }
+
+  return [...bestMap.values()]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(r => ({
+      playerId:    r.player_id,
+      name:        r.name,
+      nickname:    r.nickname,
+      score:       r.score,
+      avgWpm:      r.avg_wpm,
+      avgAccuracy: r.avg_accuracy,
+    }));
+}
+
+// JST の今週月曜0時〜次の月曜0時の範囲でベストスコアTOP10
+async function getWeeklyBestScores(limit = 10) {
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const now = new Date();
+  const jstNow = new Date(now.getTime() + jstOffset);
+  // 月曜起点（getUTCDay: 0=Sun,1=Mon,...）
+  const dayOfWeek = jstNow.getUTCDay(); // JST の曜日
+  const daysFromMon = (dayOfWeek + 6) % 7;
+  jstNow.setUTCHours(0, 0, 0, 0);
+  const jstMonday = new Date(jstNow.getTime() - daysFromMon * 24 * 60 * 60 * 1000);
+  const jstNextMon = new Date(jstMonday.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const fromUtc = new Date(jstMonday.getTime() - jstOffset);
+  const toUtc   = new Date(jstNextMon.getTime() - jstOffset);
+  return getBestScoresForPeriod(fromUtc, toUtc, limit);
+}
+
+// JST の今月1日0時〜来月1日0時の範囲でベストスコアTOP10
+async function getMonthlyBestScores(limit = 10) {
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const now = new Date();
+  const jstNow = new Date(now.getTime() + jstOffset);
+  const y = jstNow.getUTCFullYear();
+  const m = jstNow.getUTCMonth(); // 0-indexed
+  const jstMonthStart = new Date(Date.UTC(y, m, 1, 0, 0, 0));
+  const jstNextMonth  = new Date(Date.UTC(y, m + 1, 1, 0, 0, 0));
+  const fromUtc = new Date(jstMonthStart.getTime() - jstOffset);
+  const toUtc   = new Date(jstNextMonth.getTime() - jstOffset);
+  return getBestScoresForPeriod(fromUtc, toUtc, limit);
+}
+
+// JST の先月1日0時〜今月1日0時の範囲でベストスコアTOP10（月初に先月分を集計）
+async function getPrevMonthBestScores(limit = 10) {
+  const jstOffset = 9 * 60 * 60 * 1000;
+  const now = new Date();
+  const jstNow = new Date(now.getTime() + jstOffset);
+  const y = jstNow.getUTCFullYear();
+  const m = jstNow.getUTCMonth(); // 0-indexed（今月）
+  const jstPrevMonthStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));
+  const jstThisMonthStart = new Date(Date.UTC(y, m, 1, 0, 0, 0));
+  const fromUtc = new Date(jstPrevMonthStart.getTime() - jstOffset);
+  const toUtc   = new Date(jstThisMonthStart.getTime() - jstOffset);
+  return getBestScoresForPeriod(fromUtc, toUtc, limit);
+}
+
+module.exports = { supabase, getQuestions, addQuestion, updateQuestion, deleteQuestion, initIfEmpty, saveScore, deleteScoreById, getPlayerBest, getTopScores, getTodayScores, getYesterdayScores, getWeeklyBestScores, getMonthlyBestScores, getPrevMonthBestScores };

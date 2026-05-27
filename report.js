@@ -235,4 +235,70 @@ async function rankChangeNotify(type, entry, prev, totalCount) {
   await postMessage(msg);
 }
 
-module.exports = { morningReport, intermediateReport, resultReport, eveningReport, personalBestNotify, rankChangeNotify, postMessage };
+// ── 週次ベストスコアランキング（毎週月曜 9:00）─────────────
+async function weeklyRankingReport(results) {
+  const now = new Date().toLocaleDateString('ja-JP', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', weekday: 'long',
+  });
+  let content;
+  if (results && results.length > 0) {
+    const lines = results.map((p, i) =>
+      `${rankLabel(i)}　${p.nickname}（${p.name}）　${p.score}pt`
+    );
+    const winner = results[0];
+    content = [
+      '今週のベストスコアランキング TOP' + results.length,
+      ...lines,
+      '',
+      `今週の1位は ${winner.nickname}（${winner.name}）！${winner.score}pt 🏆`,
+      '来週もランクアップを目指そう！',
+    ].join('\n');
+  } else {
+    content = '今週はまだ記録がありません。\n来週こそ挑戦しよう！🏁';
+  }
+  const msg = [
+    `[info][title]📊 週次ランキング発表！ ${now}[/title]`,
+    content,
+    '[hr]',
+    `▶ 今すぐプレイ → ${GAME_URL}`,
+    '[/info]',
+  ].join('\n');
+  await postMessage(msg);
+}
+
+// ── 月次ベストスコアランキング（毎月1日 9:00）────────────
+async function monthlyRankingReport(results) {
+  const now = new Date();
+  // 前月の名前を取得（月初に実行するので「先月分」として表示）
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthName = prevMonth.toLocaleDateString('ja-JP', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long',
+  });
+
+  let content;
+  if (results && results.length > 0) {
+    const lines = results.map((p, i) =>
+      `${rankLabel(i)}　${p.nickname}（${p.name}）　${p.score}pt`
+    );
+    const winner = results[0];
+    content = [
+      `${prevMonthName} ベストスコアランキング TOP${results.length}`,
+      ...lines,
+      '',
+      `月間チャンピオンは ${winner.nickname}（${winner.name}）！${winner.score}pt 🏆`,
+      '今月も最高記録を狙っていこう！',
+    ].join('\n');
+  } else {
+    content = `${prevMonthName}はまだ記録がありません。\n今月こそ挑戦しよう！🏁`;
+  }
+  const msg = [
+    `[info][title]🏅 月次ランキング発表！[/title]`,
+    content,
+    '[hr]',
+    `▶ 今すぐプレイ → ${GAME_URL}`,
+    '[/info]',
+  ].join('\n');
+  await postMessage(msg);
+}
+
+module.exports = { morningReport, intermediateReport, resultReport, eveningReport, personalBestNotify, rankChangeNotify, weeklyRankingReport, monthlyRankingReport, postMessage };
